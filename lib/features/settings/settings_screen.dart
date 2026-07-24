@@ -6,6 +6,8 @@ import '../../core/theme/neo_brutal_colors.dart';
 import '../../core/constants/app_constants.dart';
 import '../../shared/widgets/catat_in_app_bar.dart';
 import '../../shared/widgets/neo_card.dart';
+import '../../shared/widgets/neo_icon_container.dart';
+import '../../shared/widgets/neo_section_header.dart';
 import '../../data/export_service.dart';
 import '../insight/insight_screen.dart';
 import 'category_management_screen.dart';
@@ -26,7 +28,7 @@ class SettingsScreen extends ConsumerWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Theme section
-            _SectionHeader(title: 'TAMPILAN'),
+            const NeoSectionHeader(title: 'TAMPILAN'),
             const SizedBox(height: 8),
             _ThemeSelector(
               current: themeMode,
@@ -35,7 +37,7 @@ class SettingsScreen extends ConsumerWidget {
             const SizedBox(height: 24),
 
             // Data section
-            _SectionHeader(title: 'DATA'),
+            const NeoSectionHeader(title: 'DATA'),
             const SizedBox(height: 8),
             _SettingsTile(
               icon: Icons.category_rounded,
@@ -61,7 +63,7 @@ class SettingsScreen extends ConsumerWidget {
             const SizedBox(height: 24),
 
             // Export & Insight section
-            _SectionHeader(title: 'EKSPOR & INSIGHT'),
+            const NeoSectionHeader(title: 'EKSPOR & INSIGHT'),
             const SizedBox(height: 8),
             _SettingsTile(
               icon: Icons.table_chart_rounded,
@@ -108,7 +110,7 @@ class SettingsScreen extends ConsumerWidget {
             const SizedBox(height: 24),
 
             // Backup section
-            _SectionHeader(title: 'BACKUP & RESTORE'),
+            const NeoSectionHeader(title: 'BACKUP & RESTORE'),
             const SizedBox(height: 8),
             _SettingsTile(
               icon: Icons.backup_rounded,
@@ -124,7 +126,7 @@ class SettingsScreen extends ConsumerWidget {
             const SizedBox(height: 24),
 
             // About
-            _SectionHeader(title: 'TENTANG'),
+            const NeoSectionHeader(title: 'TENTANG'),
             const SizedBox(height: 8),
             NeoCard(
               padding: const EdgeInsets.all(16),
@@ -163,29 +165,6 @@ class SettingsScreen extends ConsumerWidget {
           ],
         ),
       ),
-    );
-  }
-}
-
-class _SectionHeader extends StatelessWidget {
-  const _SectionHeader({required this.title});
-  final String title;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Container(width: 8, height: 24, color: NeoBrutalColors.primary),
-        const SizedBox(width: 10),
-        Text(
-          title,
-          style: GoogleFonts.spaceGrotesk(
-            fontSize: 12,
-            fontWeight: FontWeight.w900,
-            letterSpacing: 1.5,
-          ),
-        ),
-      ],
     );
   }
 }
@@ -292,14 +271,10 @@ class _SettingsTile extends StatelessWidget {
       borderOffset: AppConstants.shadowSmall,
       child: Row(
         children: [
-          Container(
-            width: 42,
-            height: 42,
-            decoration: BoxDecoration(
-              color: iconColor.withValues(alpha: 0.15),
-              border: Border.all(color: iconColor, width: 2),
-            ),
-            child: Icon(icon, size: 20, color: iconColor),
+          NeoIconContainer(
+            icon: icon,
+            color: iconColor,
+            size: NeoIconSize.medium,
           ),
           const SizedBox(width: 14),
           Expanded(

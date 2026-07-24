@@ -15,7 +15,8 @@ import '../../data/repositories/category_repo.dart';
 import '../../data/repositories/account_repo.dart';
 import '../../shared/widgets/catat_in_app_bar.dart';
 import '../../shared/widgets/neo_card.dart';
-import '../../shared/widgets/neo_button.dart';
+import '../../shared/widgets/neo_icon_container.dart';
+import '../../shared/widgets/neo_empty_state.dart';
 import 'add_transaction_sheet.dart';
 import 'filter_bottom_sheet.dart';
 
@@ -577,29 +578,14 @@ class _TransactionScreenState extends ConsumerState<TransactionScreen> {
             child: Row(
               children: [
                 // Type indicator
-                Container(
-                  width: 36,
-                  height: 36,
-                  decoration: BoxDecoration(
-                    color: isIncome
-                        ? NeoBrutalColors.success.withValues(alpha: 0.15)
-                        : NeoBrutalColors.danger.withValues(alpha: 0.15),
-                    border: Border.all(
-                      color: isIncome
-                          ? NeoBrutalColors.success
-                          : NeoBrutalColors.danger,
-                      width: 2,
-                    ),
-                  ),
-                  child: Icon(
-                    isIncome
-                        ? Icons.arrow_downward_rounded
-                        : Icons.arrow_upward_rounded,
-                    color: isIncome
-                        ? NeoBrutalColors.success
-                        : NeoBrutalColors.danger,
-                    size: 18,
-                  ),
+                NeoIconContainer(
+                  icon: isIncome
+                      ? Icons.arrow_downward_rounded
+                      : Icons.arrow_upward_rounded,
+                  color: isIncome
+                      ? NeoBrutalColors.success
+                      : NeoBrutalColors.danger,
+                  size: NeoIconSize.medium,
                 ),
                 const SizedBox(width: 10),
                 // Content
@@ -675,52 +661,17 @@ class _TransactionScreenState extends ConsumerState<TransactionScreen> {
   Widget _buildEmptyState(TransactionFilterState filter) {
     final isFiltered = filter.isFiltered;
 
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(32),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              isFiltered
-                  ? Icons.search_off_rounded
-                  : Icons.receipt_long_rounded,
-              size: 64,
-              color: NeoBrutalColors.muted,
-            ),
-            const SizedBox(height: 16),
-            Text(
-              isFiltered ? 'TIDAK ADA TRANSAKSI' : 'BELUM ADA TRANSAKSI',
-              style: GoogleFonts.spaceGrotesk(
-                fontSize: 16,
-                fontWeight: FontWeight.w900,
-                letterSpacing: 1.0,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              isFiltered
-                  ? 'Coba ubah filter atau tambah transaksi baru'
-                  : 'Tekan tombol + untuk memulai',
-              style: GoogleFonts.spaceGrotesk(
-                fontSize: 13,
-                fontWeight: FontWeight.w500,
-                color: NeoBrutalColors.muted,
-              ),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 20),
-            if (isFiltered)
-              NeoButton(
-                label: 'Reset Filter',
-                icon: Icons.filter_list_off_rounded,
-                color: NeoBrutalColors.secondary,
-                onTap: () =>
-                    ref.read(transactionListProvider.notifier).resetFilter(),
-              ),
-          ],
-        ),
-      ),
+    return NeoEmptyState(
+      icon: isFiltered ? Icons.search_off_rounded : Icons.receipt_long_rounded,
+      title: isFiltered ? 'Tidak Ada Transaksi' : 'Belum Ada Transaksi',
+      subtitle: isFiltered
+          ? 'Coba ubah filter atau tambah transaksi baru'
+          : 'Tekan tombol + untuk memulai',
+      ctaLabel: isFiltered ? 'Reset Filter' : null,
+      ctaColor: NeoBrutalColors.secondary,
+      onCta: isFiltered
+          ? () => ref.read(transactionListProvider.notifier).resetFilter()
+          : null,
     );
   }
 

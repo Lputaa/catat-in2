@@ -17,6 +17,9 @@ import '../../data/models/savings_contribution_model.dart';
 import '../../data/repositories/savings_goal_repo.dart';
 import '../../shared/widgets/catat_in_app_bar.dart';
 import '../../shared/widgets/neo_card.dart';
+import '../../shared/widgets/neo_icon_container.dart';
+import '../../shared/widgets/neo_progress_bar.dart';
+import '../../shared/widgets/neo_dialog_button.dart';
 import '../budget/add_budget_sheet.dart';
 import '../recurring/add_recurring_sheet.dart';
 import '../savings/add_savings_sheet.dart';
@@ -638,9 +641,8 @@ class _BudgetOverviewWidget extends ConsumerWidget {
                               ],
                             ),
                             const SizedBox(height: 4),
-                            LinearProgressIndicator(
-                              value: w.percent.clamp(0, 1),
-                              backgroundColor: NeoBrutalColors.muted,
+                            NeoProgressBar(
+                              progress: w.percent,
                               color: itemColor,
                             ),
                             const SizedBox(height: 2),
@@ -654,26 +656,13 @@ class _BudgetOverviewWidget extends ConsumerWidget {
                 ),
               ),
               const SizedBox(height: 16),
-              SizedBox(
-                width: double.infinity,
-                child: GestureDetector(
-                  onTap: () {
-                    Navigator.pop(ctx);
-                    AddBudgetSheet.show(context, year: DateTime.now().year, month: DateTime.now().month);
-                  },
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                    decoration: BoxDecoration(
-                      color: NeoBrutalColors.green,
-                      border: Border.all(color: NeoBrutalColors.ink, width: 2),
-                    ),
-                    child: Center(
-                      child: Text('+ TAMBAH BUDGET',
-                          style: GoogleFonts.spaceGrotesk(
-                              fontSize: 12, fontWeight: FontWeight.w900, color: Colors.white)),
-                    ),
-                  ),
-                ),
+              NeoDialogButton(
+                label: '+ Tambah Budget',
+                color: NeoBrutalColors.green,
+                onTap: () {
+                  Navigator.pop(ctx);
+                  AddBudgetSheet.show(context, year: DateTime.now().year, month: DateTime.now().month);
+                },
               ),
             ],
           ),
@@ -846,14 +835,10 @@ class _UpcomingRecurringWidget extends ConsumerWidget {
                         padding: const EdgeInsets.symmetric(vertical: 6),
                         child: Row(
                           children: [
-                            Container(
-                              width: 32, height: 32,
-                              decoration: BoxDecoration(
-                                color: (isDue ? NeoBrutalColors.danger : NeoBrutalColors.orange).withValues(alpha: 0.15),
-                                border: Border.all(color: isDue ? NeoBrutalColors.danger : NeoBrutalColors.orange, width: 1.5),
-                              ),
-                              child: Icon(isDue ? Icons.warning_amber_rounded : Icons.repeat_rounded, size: 16,
-                                  color: isDue ? NeoBrutalColors.danger : NeoBrutalColors.orange),
+                            NeoIconContainer(
+                              icon: isDue ? Icons.warning_amber_rounded : Icons.repeat_rounded,
+                              color: isDue ? NeoBrutalColors.danger : NeoBrutalColors.orange,
+                              size: NeoIconSize.small,
                             ),
                             const SizedBox(width: 10),
                             Expanded(
@@ -893,26 +878,13 @@ class _UpcomingRecurringWidget extends ConsumerWidget {
                 ),
               ),
               const SizedBox(height: 16),
-              SizedBox(
-                width: double.infinity,
-                child: GestureDetector(
-                  onTap: () {
-                    Navigator.pop(ctx);
-                    AddRecurringSheet.show(context);
-                  },
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                    decoration: BoxDecoration(
-                      color: NeoBrutalColors.orange,
-                      border: Border.all(color: NeoBrutalColors.ink, width: 2),
-                    ),
-                    child: Center(
-                      child: Text('+ TAMBAH TAGIHAN',
-                          style: GoogleFonts.spaceGrotesk(
-                              fontSize: 12, fontWeight: FontWeight.w900, color: Colors.white)),
-                    ),
-                  ),
-                ),
+              NeoDialogButton(
+                label: '+ Tambah Tagihan',
+                color: NeoBrutalColors.orange,
+                onTap: () {
+                  Navigator.pop(ctx);
+                  AddRecurringSheet.show(context);
+                },
               ),
             ],
           ),
@@ -1060,14 +1032,10 @@ class _SavingsProgressWidget extends ConsumerWidget {
                           children: [
                             Row(
                               children: [
-                                Container(
-                                  width: 32, height: 32,
-                                  decoration: BoxDecoration(
-                                    color: statusColor.withValues(alpha: 0.15),
-                                    border: Border.all(color: statusColor, width: 1.5),
-                                  ),
-                                  child: Icon(goal.isComplete ? Icons.check_circle_rounded : Icons.savings_rounded,
-                                      size: 16, color: statusColor),
+                                NeoIconContainer(
+                                  icon: goal.isComplete ? Icons.check_circle_rounded : Icons.savings_rounded,
+                                  color: statusColor,
+                                  size: NeoIconSize.small,
                                 ),
                                 const SizedBox(width: 10),
                                 Expanded(
@@ -1086,9 +1054,8 @@ class _SavingsProgressWidget extends ConsumerWidget {
                               ],
                             ),
                             const SizedBox(height: 6),
-                            LinearProgressIndicator(
-                              value: goal.percent.clamp(0, 1),
-                              backgroundColor: NeoBrutalColors.muted,
+                            NeoProgressBar(
+                              progress: goal.percent,
                               color: statusColor,
                             ),
                           ],
@@ -1099,26 +1066,13 @@ class _SavingsProgressWidget extends ConsumerWidget {
                 ),
               ),
               const SizedBox(height: 16),
-              SizedBox(
-                width: double.infinity,
-                child: GestureDetector(
-                  onTap: () {
-                    Navigator.pop(ctx);
-                    AddSavingsSheet.show(context);
-                  },
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                    decoration: BoxDecoration(
-                      color: NeoBrutalColors.secondary,
-                      border: Border.all(color: NeoBrutalColors.ink, width: 2),
-                    ),
-                    child: Center(
-                      child: Text('+ BUAT TARGET',
-                          style: GoogleFonts.spaceGrotesk(
-                              fontSize: 12, fontWeight: FontWeight.w900, color: Colors.white)),
-                    ),
-                  ),
-                ),
+              NeoDialogButton(
+                label: '+ Buat Target',
+                color: NeoBrutalColors.secondary,
+                onTap: () {
+                  Navigator.pop(ctx);
+                  AddSavingsSheet.show(context);
+                },
               ),
             ],
           ),
