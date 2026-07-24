@@ -14,6 +14,8 @@ import '../../data/repositories/transaction_repo.dart';
 import '../../data/repositories/category_repo.dart';
 import '../../data/repositories/account_repo.dart';
 import '../../shared/widgets/neo_segmented_control.dart';
+import '../../shared/widgets/neo_dialog.dart';
+import '../../shared/widgets/neo_header_button.dart';
 
 class AddTransactionSheet extends ConsumerStatefulWidget {
   const AddTransactionSheet({super.key, this.editTransaction});
@@ -22,20 +24,13 @@ class AddTransactionSheet extends ConsumerStatefulWidget {
 
   bool get isEdit => editTransaction != null;
 
-  static Future<bool?> show(BuildContext context,
-      {TransactionModel? editTransaction}) {
-    return showDialog<bool>(
+  static Future<bool?> show(
+    BuildContext context, {
+    TransactionModel? editTransaction,
+  }) {
+    return showNeoDialog<bool>(
       context: context,
-      barrierDismissible: true,
-      barrierColor: Colors.black54,
-      builder: (context) => Dialog(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        insetPadding:
-            const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
-        child:
-            AddTransactionSheet(editTransaction: editTransaction),
-      ),
+      child: AddTransactionSheet(editTransaction: editTransaction),
     );
   }
 
@@ -51,6 +46,7 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
   DateTime _date = DateTime.now();
   CategoryModel? _selectedCategory;
   AccountModel? _selectedAccount;
+  AccountModel? _selectedToAccount;
   List<CategoryModel> _categories = [];
   List<AccountModel> _accounts = [];
   bool _loading = true;
@@ -70,8 +66,9 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
       type = widget.editTransaction!.type;
     }
 
-    final catType =
-        type == TransactionType.income ? CategoryType.income : CategoryType.expense;
+    final catType = type == TransactionType.income
+        ? CategoryType.income
+        : CategoryType.expense;
     final cats = await CategoryRepo().getByType(catType);
 
     setState(() {
@@ -84,13 +81,22 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
         _amountController.text = tx.amount.toStringAsFixed(0);
         _noteController.text = tx.note ?? '';
         _date = tx.date;
-        _selectedCategory =
-            cats.where((c) => c.id == tx.categoryId).firstOrNull;
-        _selectedAccount =
-            accs.where((a) => a.id == tx.accountId).firstOrNull;
+        _selectedCategory = cats
+            .where((c) => c.id == tx.categoryId)
+            .firstOrNull;
+        _selectedAccount = accs.where((a) => a.id == tx.accountId).firstOrNull;
+        _selectedToAccount = accs
+            .where((a) => a.id == tx.toAccountId)
+            .firstOrNull;
       } else {
         if (cats.isNotEmpty) _selectedCategory = cats.first;
         if (accs.isNotEmpty) _selectedAccount = accs.first;
+      }
+      // A transfer always needs a valid, distinct destination wallet.
+      if (_type == TransactionType.transfer) {
+        _selectedToAccount ??= accs
+            .where((a) => a.id != _selectedAccount?.id)
+            .firstOrNull;
       }
       _loading = false;
     });
@@ -98,8 +104,19 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
 
   Future<void> _onTypeChanged(TransactionType type) async {
     HapticFeedback.selectionClick();
-    final catType =
-        type == TransactionType.income ? CategoryType.income : CategoryType.expense;
+    if (type == TransactionType.transfer) {
+      setState(() {
+        _type = type;
+        // Default to a destination distinct from the source.
+        _selectedToAccount ??= _accounts
+            .where((a) => a.id != _selectedAccount?.id)
+            .firstOrNull;
+      });
+      return;
+    }
+    final catType = type == TransactionType.income
+        ? CategoryType.income
+        : CategoryType.expense;
     final cats = await CategoryRepo().getByType(catType);
     setState(() {
       _type = type;
@@ -118,9 +135,9 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
         return Theme(
           data: Theme.of(context).copyWith(
             colorScheme: Theme.of(context).colorScheme.copyWith(
-                  primary: NeoBrutalColors.primary,
-                  onPrimary: Colors.white,
-                ),
+              primary: NeoBrutalColors.primary,
+              onPrimary: Colors.white,
+            ),
           ),
           child: child!,
         );
@@ -136,14 +153,23 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
     final amount = double.tryParse(
       _amountController.text.replaceAll('.', '').replaceAll(',', ''),
     );
-    if (amount == null ||
-        amount <= 0 ||
-        _selectedCategory == null ||
-        _selectedAccount == null) {
-      HapticFeedback.heavyImpact();
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Lengkapi semua field')),
-      );
+    final isTransfer = _type == TransactionType.transfer;
+
+    if (amount == null || amount <= 0) {
+      _showError('Masukkan jumlah yang valid');
+      return;
+    }
+    if (isTransfer) {
+      if (_selectedAccount == null || _selectedToAccount == null) {
+        _showError('Pilih wallet asal & tujuan');
+        return;
+      }
+      if (_selectedAccount!.id == _selectedToAccount!.id) {
+        _showError('Wallet asal & tujuan harus berbeda');
+        return;
+      }
+    } else if (_selectedCategory == null || _selectedAccount == null) {
+      _showError('Lengkapi semua field');
       return;
     }
 
@@ -157,8 +183,9 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
         final updated = widget.editTransaction!.copyWith(
           type: _type,
           amount: amount,
-          categoryId: _selectedCategory!.id,
+          categoryId: isTransfer ? '' : _selectedCategory!.id,
           accountId: _selectedAccount!.id,
+          toAccountId: isTransfer ? _selectedToAccount!.id : null,
           date: _date,
           note: _noteController.text.isNotEmpty ? _noteController.text : null,
         );
@@ -168,8 +195,9 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
           id: repo.newId(),
           type: _type,
           amount: amount,
-          categoryId: _selectedCategory!.id,
+          categoryId: isTransfer ? '' : _selectedCategory!.id,
           accountId: _selectedAccount!.id,
+          toAccountId: isTransfer ? _selectedToAccount!.id : null,
           date: _date,
           note: _noteController.text.isNotEmpty ? _noteController.text : null,
         );
@@ -180,11 +208,16 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
     } catch (e) {
       setState(() => _saving = false);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e')),
-        );
+        _showError('Error: $e');
       }
     }
+  }
+
+  void _showError(String message) {
+    HapticFeedback.heavyImpact();
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
   }
 
   @override
@@ -194,8 +227,11 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
     super.dispose();
   }
 
-  Color get _typeColor =>
-      _type == TransactionType.income ? NeoBrutalColors.success : NeoBrutalColors.danger;
+  Color get _typeColor => switch (_type) {
+    TransactionType.income => NeoBrutalColors.success,
+    TransactionType.expense => NeoBrutalColors.danger,
+    TransactionType.transfer => NeoBrutalColors.secondary,
+  };
 
   @override
   Widget build(BuildContext context) {
@@ -227,10 +263,7 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
         mainAxisSize: MainAxisSize.min,
         children: [
           // ── Color Accent Bar ──
-          Container(
-            height: 8,
-            color: _typeColor,
-          ),
+          Container(height: 8, color: _typeColor),
 
           // ── Header ──
           _buildHeader(borderColor),
@@ -253,6 +286,7 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
                       segments: neoSegments([
                         (TransactionType.expense, 'Pengeluaran'),
                         (TransactionType.income, 'Pemasukan'),
+                        (TransactionType.transfer, 'Transfer'),
                       ]),
                       selected: _type,
                       onChanged: _onTypeChanged,
@@ -263,17 +297,23 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
                     _buildAmountInput(),
                     const SizedBox(height: 24),
 
-                    // Category selection
-                    _buildSectionTitle('KATEGORI'),
-                    const SizedBox(height: 10),
-                    _buildCategoryChips(),
-                    const SizedBox(height: 20),
-
-                    // Account selection
-                    _buildSectionTitle('AKUN'),
-                    const SizedBox(height: 10),
-                    _buildAccountChips(),
-                    const SizedBox(height: 20),
+                    // Category / wallet section — transfers swap the category
+                    // picker for a source → destination wallet selector.
+                    if (_type == TransactionType.transfer)
+                      _buildTransferAccounts()
+                    else ...[
+                      _buildSectionTitle('KATEGORI'),
+                      const SizedBox(height: 10),
+                      _buildCategoryChips(),
+                      const SizedBox(height: 20),
+                      _buildSectionTitle('AKUN'),
+                      const SizedBox(height: 10),
+                      _buildAccountChips(
+                        selected: _selectedAccount,
+                        onSelect: (a) => setState(() => _selectedAccount = a),
+                      ),
+                      const SizedBox(height: 20),
+                    ],
 
                     // Date & Note
                     _buildSectionTitle('DETAIL'),
@@ -297,7 +337,10 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
       padding: const EdgeInsets.fromLTRB(20, 14, 14, 14),
       decoration: BoxDecoration(
         border: Border(
-          bottom: BorderSide(color: borderColor, width: AppConstants.borderSecondary),
+          bottom: BorderSide(
+            color: borderColor,
+            width: AppConstants.borderSecondary,
+          ),
         ),
       ),
       child: Row(
@@ -308,12 +351,17 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
             height: 36,
             decoration: BoxDecoration(
               color: _typeColor,
-              border: Border.all(color: borderColor, width: AppConstants.borderSecondary),
+              border: Border.all(
+                color: borderColor,
+                width: AppConstants.borderSecondary,
+              ),
             ),
             child: Icon(
-              _type == TransactionType.income
-                  ? Icons.arrow_downward_rounded
-                  : Icons.arrow_upward_rounded,
+              switch (_type) {
+                TransactionType.income => Icons.arrow_downward_rounded,
+                TransactionType.expense => Icons.arrow_upward_rounded,
+                TransactionType.transfer => Icons.swap_horiz_rounded,
+              },
               size: 20,
               color: Colors.white,
             ),
@@ -332,7 +380,7 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
           ),
           // Delete button (edit mode)
           if (widget.isEdit) ...[
-            _HeaderButton(
+            NeoHeaderButton(
               icon: Icons.delete_outline_rounded,
               color: NeoBrutalColors.danger,
               borderColor: borderColor,
@@ -341,7 +389,7 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
             const SizedBox(width: 8),
           ],
           // Close button with 3D press effect
-          _HeaderButton(
+          NeoHeaderButton(
             icon: Icons.close_rounded,
             borderColor: borderColor,
             onTap: () => Navigator.pop(context),
@@ -397,10 +445,7 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
                 padding: const EdgeInsets.only(right: 12),
                 decoration: BoxDecoration(
                   border: Border(
-                    right: BorderSide(
-                      color: NeoBrutalColors.muted,
-                      width: 2,
-                    ),
+                    right: BorderSide(color: NeoBrutalColors.muted, width: 2),
                   ),
                 ),
                 child: Text(
@@ -444,10 +489,7 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
           ),
         ),
         // Color accent bar at bottom
-        Container(
-          height: 4,
-          color: _typeColor,
-        ),
+        Container(height: 4, color: _typeColor),
       ],
     );
   }
@@ -459,7 +501,11 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
         fontSize: 10,
         fontWeight: FontWeight.w900,
         letterSpacing: 2.0,
-        color: NeoBrutalColors.ink.withValues(alpha: 0.5),
+        color:
+            (Theme.of(context).brightness == Brightness.dark
+                    ? NeoBrutalColors.inkDark
+                    : NeoBrutalColors.ink)
+                .withValues(alpha: 0.5),
       ),
     );
   }
@@ -498,8 +544,7 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
                     ],
             ),
             transform: selected
-                ? (Matrix4.identity()
-                  ..translateByDouble(1.5, 1.5, 0.0, 1.0))
+                ? (Matrix4.identity()..translateByDouble(1.5, 1.5, 0.0, 1.0))
                 : Matrix4.identity(),
             child: Text(
               cat.name.toUpperCase(),
@@ -516,7 +561,46 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
     );
   }
 
-  Widget _buildAccountChips() {
+  Widget _buildTransferAccounts() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildSectionTitle('DARI WALLET'),
+        const SizedBox(height: 10),
+        _buildAccountChips(
+          selected: _selectedAccount,
+          excludeId: _selectedToAccount?.id,
+          selectedColor: NeoBrutalColors.danger,
+          onSelect: (a) => setState(() => _selectedAccount = a),
+        ),
+        const SizedBox(height: 14),
+        const Center(
+          child: Icon(
+            Icons.arrow_downward_rounded,
+            size: 20,
+            color: NeoBrutalColors.secondary,
+          ),
+        ),
+        const SizedBox(height: 14),
+        _buildSectionTitle('KE WALLET'),
+        const SizedBox(height: 10),
+        _buildAccountChips(
+          selected: _selectedToAccount,
+          excludeId: _selectedAccount?.id,
+          selectedColor: NeoBrutalColors.success,
+          onSelect: (a) => setState(() => _selectedToAccount = a),
+        ),
+        const SizedBox(height: 20),
+      ],
+    );
+  }
+
+  Widget _buildAccountChips({
+    required AccountModel? selected,
+    required ValueChanged<AccountModel> onSelect,
+    String? excludeId,
+    Color selectedColor = NeoBrutalColors.secondary,
+  }) {
     final brightness = Theme.of(context).brightness;
     final borderColor = NeoBrutalTheme.borderColor(brightness);
 
@@ -524,56 +608,61 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
       spacing: 8,
       runSpacing: 8,
       children: _accounts.map((acc) {
-        final selected = _selectedAccount?.id == acc.id;
-        return GestureDetector(
-          onTap: () {
-            HapticFeedback.selectionClick();
-            setState(() => _selectedAccount = acc);
-          },
-          child: AnimatedContainer(
-            duration: AppConstants.animButton,
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            decoration: BoxDecoration(
-              color: selected
-                  ? NeoBrutalColors.secondary
-                  : NeoBrutalColors.surface,
-              border: Border.all(
-                color: borderColor,
-                width: AppConstants.borderSecondary,
+        final isExcluded = excludeId != null && acc.id == excludeId;
+        final isSelected = selected?.id == acc.id;
+        return Opacity(
+          opacity: isExcluded ? 0.35 : 1,
+          child: GestureDetector(
+            onTap: isExcluded
+                ? null
+                : () {
+                    HapticFeedback.selectionClick();
+                    onSelect(acc);
+                  },
+            child: AnimatedContainer(
+              duration: AppConstants.animButton,
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              decoration: BoxDecoration(
+                color: isSelected ? selectedColor : NeoBrutalColors.surface,
+                border: Border.all(
+                  color: borderColor,
+                  width: AppConstants.borderSecondary,
+                ),
+                boxShadow: isSelected
+                    ? []
+                    : [
+                        BoxShadow(
+                          color: borderColor,
+                          offset: const Offset(3, 3),
+                          blurRadius: 0,
+                        ),
+                      ],
               ),
-              boxShadow: selected
-                  ? []
-                  : [
-                      BoxShadow(
-                        color: borderColor,
-                        offset: const Offset(3, 3),
-                        blurRadius: 0,
-                      ),
-                    ],
-            ),
-            transform: selected
-                ? (Matrix4.identity()
-                  ..translateByDouble(1.5, 1.5, 0.0, 1.0))
-                : Matrix4.identity(),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(
-                  _iconForAccountType(acc.type),
-                  size: 16,
-                  color: selected ? Colors.white : NeoBrutalColors.ink,
-                ),
-                const SizedBox(width: 6),
-                Text(
-                  acc.name.toUpperCase(),
-                  style: GoogleFonts.spaceGrotesk(
-                    fontSize: 11,
-                    fontWeight: selected ? FontWeight.w900 : FontWeight.w700,
-                    letterSpacing: 0.5,
-                    color: selected ? Colors.white : NeoBrutalColors.ink,
+              transform: isSelected
+                  ? (Matrix4.identity()..translateByDouble(1.5, 1.5, 0.0, 1.0))
+                  : Matrix4.identity(),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    _iconForAccountType(acc.type),
+                    size: 16,
+                    color: isSelected ? Colors.white : NeoBrutalColors.ink,
                   ),
-                ),
-              ],
+                  const SizedBox(width: 6),
+                  Text(
+                    acc.name.toUpperCase(),
+                    style: GoogleFonts.spaceGrotesk(
+                      fontSize: 11,
+                      fontWeight: isSelected
+                          ? FontWeight.w900
+                          : FontWeight.w700,
+                      letterSpacing: 0.5,
+                      color: isSelected ? Colors.white : NeoBrutalColors.ink,
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         );
@@ -608,7 +697,9 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
             decoration: BoxDecoration(
               color: NeoBrutalColors.surface,
               border: Border.all(
-                  color: borderColor, width: AppConstants.borderSecondary),
+                color: borderColor,
+                width: AppConstants.borderSecondary,
+              ),
               boxShadow: [
                 BoxShadow(
                   color: borderColor,
@@ -641,7 +732,9 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
             decoration: BoxDecoration(
               color: NeoBrutalColors.surface,
               border: Border.all(
-                  color: borderColor, width: AppConstants.borderSecondary),
+                color: borderColor,
+                width: AppConstants.borderSecondary,
+              ),
               boxShadow: [
                 BoxShadow(
                   color: borderColor,
@@ -687,7 +780,9 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
         decoration: BoxDecoration(
           color: _saving ? NeoBrutalColors.muted : NeoBrutalColors.success,
           border: Border.all(
-              color: borderColor, width: AppConstants.borderPrimary),
+            color: borderColor,
+            width: AppConstants.borderPrimary,
+          ),
           boxShadow: _saving
               ? []
               : [
@@ -699,27 +794,30 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
                 ],
         ),
         transform: _saving
-            ? (Matrix4.identity()
-              ..translateByDouble(
-                  AppConstants.shadowDefault.dx / 2,
-                  AppConstants.shadowDefault.dy / 2,
-                  0.0,
-                  1.0))
+            ? (Matrix4.identity()..translateByDouble(
+                AppConstants.shadowDefault.dx / 2,
+                AppConstants.shadowDefault.dy / 2,
+                0.0,
+                1.0,
+              ))
             : Matrix4.identity(),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             if (!_saving) ...[
-              const Icon(Icons.check_circle_outline_rounded,
-                  size: 20, color: Colors.white),
+              const Icon(
+                Icons.check_circle_outline_rounded,
+                size: 20,
+                color: Colors.white,
+              ),
               const SizedBox(width: 8),
             ],
             Text(
               _saving
                   ? 'MENYIMPAN...'
                   : widget.isEdit
-                      ? 'SIMPAN PERUBAHAN'
-                      : 'SIMPAN TRANSAKSI',
+                  ? 'SIMPAN PERUBAHAN'
+                  : 'SIMPAN TRANSAKSI',
               style: GoogleFonts.spaceGrotesk(
                 fontSize: 14,
                 fontWeight: FontWeight.w900,
@@ -752,8 +850,10 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
               HapticFeedback.mediumImpact();
               if (mounted) Navigator.pop(context, true);
             },
-            child: const Text('HAPUS',
-                style: TextStyle(color: NeoBrutalColors.danger)),
+            child: const Text(
+              'HAPUS',
+              style: TextStyle(color: NeoBrutalColors.danger),
+            ),
           ),
         ],
       ),
@@ -805,68 +905,5 @@ class _ThousandsSeparatorInputFormatter extends TextInputFormatter {
       buffer.write(str[i]);
     }
     return buffer.toString();
-  }
-}
-
-/// Header button with 3D press effect
-class _HeaderButton extends StatefulWidget {
-  const _HeaderButton({
-    required this.icon,
-    required this.borderColor,
-    required this.onTap,
-    this.color,
-  });
-
-  final IconData icon;
-  final Color borderColor;
-  final Color? color;
-  final VoidCallback onTap;
-
-  @override
-  State<_HeaderButton> createState() => _HeaderButtonState();
-}
-
-class _HeaderButtonState extends State<_HeaderButton> {
-  bool _pressed = false;
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTapDown: (_) => setState(() => _pressed = true),
-      onTapUp: (_) {
-        setState(() => _pressed = false);
-        HapticFeedback.lightImpact();
-        widget.onTap();
-      },
-      onTapCancel: () => setState(() => _pressed = false),
-      child: AnimatedContainer(
-        duration: AppConstants.animButton,
-        padding: const EdgeInsets.all(8),
-        decoration: BoxDecoration(
-          color: _pressed ? NeoBrutalColors.surface : Colors.transparent,
-          border: Border.all(
-            color: widget.color ?? widget.borderColor,
-            width: AppConstants.borderSecondary,
-          ),
-          boxShadow: _pressed
-              ? []
-              : [
-                  BoxShadow(
-                    color: widget.color ?? widget.borderColor,
-                    offset: const Offset(2, 2),
-                    blurRadius: 0,
-                  ),
-                ],
-        ),
-        transform: _pressed
-            ? (Matrix4.identity()..translateByDouble(2.0, 2.0, 0.0, 1.0))
-            : Matrix4.identity(),
-        child: Icon(
-          widget.icon,
-          size: 18,
-          color: widget.color,
-        ),
-      ),
-    );
   }
 }

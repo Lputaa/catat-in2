@@ -48,9 +48,8 @@ class ReportsScreen extends ConsumerWidget {
               data: (accs) => _AccountFilterChips(
                 accounts: accs,
                 selected: accountFilter,
-                onChanged: (id) => ref
-                    .read(reportAccountFilterProvider.notifier)
-                    .state = id,
+                onChanged: (id) =>
+                    ref.read(reportAccountFilterProvider.notifier).state = id,
               ),
               loading: () => const SizedBox.shrink(),
               error: (_, _) => const SizedBox.shrink(),
@@ -99,14 +98,16 @@ class _AccountFilterChips extends StatelessWidget {
             onTap: () => onChanged(null),
           ),
           const SizedBox(width: 6),
-          ...accounts.map((a) => Padding(
-                padding: const EdgeInsets.only(right: 6),
-                child: _FilterChip(
-                  label: a.name.toUpperCase(),
-                  selected: selected == a.id,
-                  onTap: () => onChanged(a.id),
-                ),
-              )),
+          ...accounts.map(
+            (a) => Padding(
+              padding: const EdgeInsets.only(right: 6),
+              child: _FilterChip(
+                label: a.name.toUpperCase(),
+                selected: selected == a.id,
+                onTap: () => onChanged(a.id),
+              ),
+            ),
+          ),
         ],
       ),
     );
@@ -114,8 +115,11 @@ class _AccountFilterChips extends StatelessWidget {
 }
 
 class _FilterChip extends StatelessWidget {
-  const _FilterChip(
-      {required this.label, required this.selected, required this.onTap});
+  const _FilterChip({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
   final String label;
   final bool selected;
   final VoidCallback onTap;
@@ -137,9 +141,10 @@ class _FilterChip extends StatelessWidget {
           boxShadow: selected
               ? [
                   BoxShadow(
-                      color: NeoBrutalColors.ink,
-                      offset: const Offset(2, 2),
-                      blurRadius: 0)
+                    color: NeoBrutalColors.ink,
+                    offset: const Offset(2, 2),
+                    blurRadius: 0,
+                  ),
                 ]
               : null,
         ),
@@ -149,6 +154,7 @@ class _FilterChip extends StatelessWidget {
             fontSize: 10,
             fontWeight: selected ? FontWeight.w900 : FontWeight.w600,
             letterSpacing: 0.8,
+            color: NeoBrutalColors.ink,
           ),
         ),
       ),
@@ -168,8 +174,9 @@ class _CategoryFilterChips extends ConsumerWidget {
     return categories.when(
       data: (cats) {
         // Filter only expense categories for chart
-        final expenseCats =
-            cats.where((c) => c.type == CategoryType.expense).toList();
+        final expenseCats = cats
+            .where((c) => c.type == CategoryType.expense)
+            .toList();
 
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -192,21 +199,26 @@ class _CategoryFilterChips extends ConsumerWidget {
                   _FilterChip(
                     label: 'SEMUA',
                     selected: selected == null,
-                    onTap: () => ref
-                        .read(reportCategoryFilterProvider.notifier)
-                        .state = null,
+                    onTap: () =>
+                        ref.read(reportCategoryFilterProvider.notifier).state =
+                            null,
                   ),
                   const SizedBox(width: 6),
-                  ...expenseCats.map((cat) => Padding(
-                        padding: const EdgeInsets.only(right: 6),
-                        child: _FilterChip(
-                          label: cat.name.toUpperCase(),
-                          selected: selected == cat.id,
-                          onTap: () => ref
-                              .read(reportCategoryFilterProvider.notifier)
-                              .state = selected == cat.id ? null : cat.id,
-                        ),
-                      )),
+                  ...expenseCats.map(
+                    (cat) => Padding(
+                      padding: const EdgeInsets.only(right: 6),
+                      child: _FilterChip(
+                        label: cat.name.toUpperCase(),
+                        selected: selected == cat.id,
+                        onTap: () =>
+                            ref
+                                .read(reportCategoryFilterProvider.notifier)
+                                .state = selected == cat.id
+                            ? null
+                            : cat.id,
+                      ),
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -228,8 +240,11 @@ class _CashflowSummary extends ConsumerWidget {
     final cashflow = ref.watch(reportCashflowProvider);
     final period = ref.watch(reportPeriodProvider);
     final now = DateTime.now();
-    final formatter =
-        NumberFormat.currency(locale: 'id_ID', symbol: 'Rp', decimalDigits: 0);
+    final formatter = NumberFormat.currency(
+      locale: 'id_ID',
+      symbol: 'Rp',
+      decimalDigits: 0,
+    );
 
     final income = cashflow['income'] ?? 0;
     final expense = cashflow['expense'] ?? 0;
@@ -241,8 +256,10 @@ class _CashflowSummary extends ConsumerWidget {
         periodLabel = 'MINGGU INI';
         break;
       case ReportPeriod.month:
-        periodLabel =
-            DateFormat('MMMM yyyy', 'id_ID').format(now).toUpperCase();
+        periodLabel = DateFormat(
+          'MMMM yyyy',
+          'id_ID',
+        ).format(now).toUpperCase();
         break;
       case ReportPeriod.year:
         periodLabel = 'TAHUN ${now.year}';
@@ -255,22 +272,29 @@ class _CashflowSummary extends ConsumerWidget {
         Text(
           'CASHFLOW $periodLabel',
           style: GoogleFonts.spaceGrotesk(
-              fontSize: 12, fontWeight: FontWeight.w900, letterSpacing: 1.5),
+            fontSize: 12,
+            fontWeight: FontWeight.w900,
+            letterSpacing: 1.5,
+          ),
         ),
         const SizedBox(height: 12),
         Row(
           children: [
             Expanded(
-                child: _StatCard(
-                    label: 'MASUK',
-                    value: formatter.format(income),
-                    color: NeoBrutalColors.success)),
+              child: _StatCard(
+                label: 'MASUK',
+                value: formatter.format(income),
+                color: NeoBrutalColors.success,
+              ),
+            ),
             const SizedBox(width: 8),
             Expanded(
-                child: _StatCard(
-                    label: 'KELUAR',
-                    value: formatter.format(expense),
-                    color: NeoBrutalColors.danger)),
+              child: _StatCard(
+                label: 'KELUAR',
+                value: formatter.format(expense),
+                color: NeoBrutalColors.danger,
+              ),
+            ),
           ],
         ),
         const SizedBox(height: 8),
@@ -285,8 +309,11 @@ class _CashflowSummary extends ConsumerWidget {
 }
 
 class _StatCard extends StatelessWidget {
-  const _StatCard(
-      {required this.label, required this.value, required this.color});
+  const _StatCard({
+    required this.label,
+    required this.value,
+    required this.color,
+  });
   final String label;
   final String value;
   final Color color;
@@ -299,16 +326,23 @@ class _StatCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(label,
-              style: GoogleFonts.spaceGrotesk(
-                  fontSize: 10,
-                  fontWeight: FontWeight.w900,
-                  letterSpacing: 1.0,
-                  color: color)),
+          Text(
+            label,
+            style: GoogleFonts.spaceGrotesk(
+              fontSize: 10,
+              fontWeight: FontWeight.w900,
+              letterSpacing: 1.0,
+              color: color,
+            ),
+          ),
           const SizedBox(height: 4),
-          Text(value,
-              style: GoogleFonts.spaceGrotesk(
-                  fontSize: 18, fontWeight: FontWeight.w800)),
+          Text(
+            value,
+            style: GoogleFonts.spaceGrotesk(
+              fontSize: 18,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
         ],
       ),
     );
@@ -324,8 +358,11 @@ class _TrendChart extends ConsumerWidget {
     final trendData = ref.watch(reportTrendProvider);
     final period = ref.watch(reportPeriodProvider);
     final offset = ref.watch(chartPeriodOffsetProvider);
-    final fullFormatter =
-        NumberFormat.currency(locale: 'id_ID', symbol: 'Rp', decimalDigits: 0);
+    final fullFormatter = NumberFormat.currency(
+      locale: 'id_ID',
+      symbol: 'Rp',
+      decimalDigits: 0,
+    );
 
     if (trendData.isEmpty) {
       return const SizedBox.shrink();
@@ -352,8 +389,9 @@ class _TrendChart extends ConsumerWidget {
     String periodLabel;
     switch (period) {
       case ReportPeriod.week:
-        final weekStart =
-            now.subtract(Duration(days: now.weekday - 1 + (offset * 7)));
+        final weekStart = now.subtract(
+          Duration(days: now.weekday - 1 + (offset * 7)),
+        );
         periodLabel =
             '${DateFormat('dd MMM').format(weekStart)} - ${DateFormat('dd MMM yyyy').format(weekStart.add(const Duration(days: 6)))}';
         break;
@@ -391,12 +429,13 @@ class _TrendChart extends ConsumerWidget {
                 'TREN ${period == ReportPeriod.week
                     ? 'MINGGUAN'
                     : period == ReportPeriod.month
-                        ? 'BULANAN'
-                        : 'TAHUNAN'}',
+                    ? 'BULANAN'
+                    : 'TAHUNAN'}',
                 style: GoogleFonts.spaceGrotesk(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w900,
-                    letterSpacing: 1.5),
+                  fontSize: 12,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: 1.5,
+                ),
               ),
             ),
           ],
@@ -479,8 +518,9 @@ class _TrendChart extends ConsumerWidget {
                       touchTooltipData: LineTouchTooltipData(
                         getTooltipItems: (touchedSpots) {
                           return touchedSpots.map((spot) {
-                            final label =
-                                spot.barIndex == 0 ? 'Masuk' : 'Keluar';
+                            final label = spot.barIndex == 0
+                                ? 'Masuk'
+                                : 'Keluar';
                             return LineTooltipItem(
                               '$label\n${fullFormatter.format(spot.y)}',
                               GoogleFonts.spaceGrotesk(
@@ -495,11 +535,14 @@ class _TrendChart extends ConsumerWidget {
                     ),
                     titlesData: FlTitlesData(
                       leftTitles: const AxisTitles(
-                          sideTitles: SideTitles(showTitles: false)),
+                        sideTitles: SideTitles(showTitles: false),
+                      ),
                       rightTitles: const AxisTitles(
-                          sideTitles: SideTitles(showTitles: false)),
+                        sideTitles: SideTitles(showTitles: false),
+                      ),
                       topTitles: const AxisTitles(
-                          sideTitles: SideTitles(showTitles: false)),
+                        sideTitles: SideTitles(showTitles: false),
+                      ),
                       bottomTitles: AxisTitles(
                         sideTitles: SideTitles(
                           showTitles: true,
@@ -521,7 +564,9 @@ class _TrendChart extends ConsumerWidget {
                               child: Text(
                                 trendData[index].label,
                                 style: GoogleFonts.spaceGrotesk(
-                                  fontSize: period == ReportPeriod.month ? 9 : 10,
+                                  fontSize: period == ReportPeriod.month
+                                      ? 9
+                                      : 10,
                                   fontWeight: FontWeight.w600,
                                 ),
                               ),
@@ -536,8 +581,7 @@ class _TrendChart extends ConsumerWidget {
                       horizontalInterval: maxVal / 4,
                       getDrawingHorizontalLine: (value) {
                         return FlLine(
-                          color:
-                              NeoBrutalColors.muted.withValues(alpha: 0.3),
+                          color: NeoBrutalColors.muted.withValues(alpha: 0.3),
                           strokeWidth: 1,
                         );
                       },
@@ -564,8 +608,7 @@ class _TrendChart extends ConsumerWidget {
                         ),
                         belowBarData: BarAreaData(
                           show: true,
-                          color: NeoBrutalColors.success
-                              .withValues(alpha: 0.1),
+                          color: NeoBrutalColors.success.withValues(alpha: 0.1),
                         ),
                       ),
                       // Expense line
@@ -588,8 +631,7 @@ class _TrendChart extends ConsumerWidget {
                         ),
                         belowBarData: BarAreaData(
                           show: true,
-                          color:
-                              NeoBrutalColors.danger.withValues(alpha: 0.1),
+                          color: NeoBrutalColors.danger.withValues(alpha: 0.1),
                         ),
                       ),
                     ],
@@ -618,8 +660,10 @@ class _LegendDot extends StatelessWidget {
         const SizedBox(width: 6),
         Text(
           label,
-          style:
-              GoogleFonts.spaceGrotesk(fontSize: 11, fontWeight: FontWeight.w700),
+          style: GoogleFonts.spaceGrotesk(
+            fontSize: 11,
+            fontWeight: FontWeight.w700,
+          ),
         ),
       ],
     );
@@ -655,18 +699,21 @@ class _NavButtonState extends State<_NavButton> {
     final borderColor = NeoBrutalTheme.borderColor(brightness);
 
     return GestureDetector(
-      onTapDown: widget.onTap != null ? (_) => setState(() => _pressed = true) : null,
+      onTapDown: widget.onTap != null
+          ? (_) => setState(() => _pressed = true)
+          : null,
       onTapUp: widget.onTap != null
           ? (_) {
               setState(() => _pressed = false);
               widget.onTap?.call();
             }
           : null,
-      onTapCancel: widget.onTap != null ? () => setState(() => _pressed = false) : null,
+      onTapCancel: widget.onTap != null
+          ? () => setState(() => _pressed = false)
+          : null,
       child: AnimatedContainer(
         duration: AppConstants.animButton,
-        padding: const EdgeInsets.symmetric(
-            horizontal: 10, vertical: 6),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
         decoration: BoxDecoration(
           color: widget.enabled
               ? (widget.color ?? NeoBrutalColors.surface)
@@ -686,8 +733,7 @@ class _NavButtonState extends State<_NavButton> {
                 ],
         ),
         transform: _pressed
-            ? (Matrix4.identity()
-              ..translateByDouble(2.0, 2.0, 0.0, 1.0))
+            ? (Matrix4.identity()..translateByDouble(2.0, 2.0, 0.0, 1.0))
             : Matrix4.identity(),
         child: widget.icon != null
             ? Icon(
@@ -717,8 +763,11 @@ class _CategoryBreakdown extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final breakdown = ref.watch(reportCategoryBreakdownProvider);
     final categories = ref.watch(reportCategoriesProvider);
-    final formatter =
-        NumberFormat.currency(locale: 'id_ID', symbol: 'Rp', decimalDigits: 0);
+    final formatter = NumberFormat.currency(
+      locale: 'id_ID',
+      symbol: 'Rp',
+      decimalDigits: 0,
+    );
 
     if (breakdown.isEmpty) {
       return Column(
@@ -727,7 +776,10 @@ class _CategoryBreakdown extends ConsumerWidget {
           Text(
             'BREAKDOWN KATEGORI',
             style: GoogleFonts.spaceGrotesk(
-                fontSize: 12, fontWeight: FontWeight.w900, letterSpacing: 1.5),
+              fontSize: 12,
+              fontWeight: FontWeight.w900,
+              letterSpacing: 1.5,
+            ),
           ),
           const SizedBox(height: 12),
           NeoCard(
@@ -735,7 +787,9 @@ class _CategoryBreakdown extends ConsumerWidget {
               child: Text(
                 'Belum ada data pengeluaran',
                 style: GoogleFonts.spaceGrotesk(
-                    fontSize: 14, fontWeight: FontWeight.w600),
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
             ),
           ),
@@ -755,9 +809,10 @@ class _CategoryBreakdown extends ConsumerWidget {
             Text(
               'BREAKDOWN KATEGORI',
               style: GoogleFonts.spaceGrotesk(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w900,
-                  letterSpacing: 1.5),
+                fontSize: 12,
+                fontWeight: FontWeight.w900,
+                letterSpacing: 1.5,
+              ),
             ),
             const SizedBox(height: 12),
             NeoCard(
@@ -778,8 +833,7 @@ class _CategoryBreakdown extends ConsumerWidget {
                               final percent = (e.value / total * 100);
                               return PieChartSectionData(
                                 value: e.value,
-                                color:
-                                    cat?.colorValue ?? NeoBrutalColors.muted,
+                                color: cat?.colorValue ?? NeoBrutalColors.muted,
                                 title: percent >= 5
                                     ? '${percent.toStringAsFixed(0)}%'
                                     : '',
@@ -804,7 +858,9 @@ class _CategoryBreakdown extends ConsumerWidget {
                                 fontSize: 9,
                                 fontWeight: FontWeight.w900,
                                 letterSpacing: 1.5,
-                                color: NeoBrutalColors.ink.withValues(alpha: 0.5),
+                                color: NeoBrutalColors.ink.withValues(
+                                  alpha: 0.5,
+                                ),
                               ),
                             ),
                             const SizedBox(height: 2),
@@ -835,10 +891,11 @@ class _CategoryBreakdown extends ConsumerWidget {
                             width: 16,
                             height: 16,
                             decoration: BoxDecoration(
-                              color:
-                                  cat?.colorValue ?? NeoBrutalColors.muted,
+                              color: cat?.colorValue ?? NeoBrutalColors.muted,
                               border: Border.all(
-                                  color: NeoBrutalColors.ink, width: 1.5),
+                                color: NeoBrutalColors.ink,
+                                width: 1.5,
+                              ),
                             ),
                           ),
                           const SizedBox(width: 8),
@@ -846,13 +903,17 @@ class _CategoryBreakdown extends ConsumerWidget {
                             child: Text(
                               cat?.name ?? e.key,
                               style: GoogleFonts.spaceGrotesk(
-                                  fontSize: 13, fontWeight: FontWeight.w700),
+                                fontSize: 13,
+                                fontWeight: FontWeight.w700,
+                              ),
                             ),
                           ),
                           Text(
                             formatter.format(e.value),
                             style: GoogleFonts.spaceGrotesk(
-                                fontSize: 13, fontWeight: FontWeight.w800),
+                              fontSize: 13,
+                              fontWeight: FontWeight.w800,
+                            ),
                           ),
                         ],
                       ),

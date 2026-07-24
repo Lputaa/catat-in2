@@ -8,6 +8,8 @@ import '../../data/models/account_model.dart';
 import '../../data/repositories/savings_goal_repo.dart';
 import '../../data/repositories/account_repo.dart';
 import '../../shared/widgets/neo_button.dart';
+import '../../shared/widgets/catat_in_app_bar.dart';
+import '../../shared/widgets/dot_pattern_background.dart';
 import '../../shared/widgets/neo_text_field.dart';
 
 class AddSavingsScreen extends StatefulWidget {
@@ -51,7 +53,9 @@ class _AddSavingsScreenState extends State<AddSavingsScreen> {
 
   Future<void> _save() async {
     final name = _nameController.text.trim();
-    final amount = double.tryParse(_amountController.text.replaceAll('.', '').replaceAll(',', ''));
+    final amount = double.tryParse(
+      _amountController.text.replaceAll('.', '').replaceAll(',', ''),
+    );
     if (name.isEmpty || amount == null || amount <= 0) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Lengkapi nama dan target jumlah')),
@@ -61,14 +65,16 @@ class _AddSavingsScreenState extends State<AddSavingsScreen> {
 
     HapticFeedback.mediumImpact();
     final repo = SavingsGoalRepo();
-    await repo.insert(SavingsGoalModel(
-      id: repo.newGoalId(),
-      name: name,
-      targetAmount: amount,
-      savedAmount: 0,
-      deadline: _deadline,
-      accountId: _accountId,
-    ));
+    await repo.insert(
+      SavingsGoalModel(
+        id: repo.newGoalId(),
+        name: name,
+        targetAmount: amount,
+        savedAmount: 0,
+        deadline: _deadline,
+        accountId: _accountId,
+      ),
+    );
 
     if (mounted) Navigator.pop(context, true);
   }
@@ -82,100 +88,121 @@ class _AddSavingsScreenState extends State<AddSavingsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    if (_loading) return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    if (_loading) {
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text(
-          'BUAT TARGET',
-          style: GoogleFonts.spaceGrotesk(fontSize: 16, fontWeight: FontWeight.w900, letterSpacing: 1.0),
-        ),
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            NeoTextField(
-              controller: _nameController,
-              label: 'Nama Target',
-              hint: 'Contoh: Liburan Bali',
-              prefixIcon: Icons.flag_rounded,
-            ),
-            const SizedBox(height: 16),
-            NeoTextField(
-              controller: _amountController,
-              label: 'Target Jumlah (Rp)',
-              hint: '0',
-              keyboardType: TextInputType.number,
-              prefixIcon: Icons.payments_rounded,
-            ),
-            const SizedBox(height: 16),
-            // Deadline
-            Text('TENGGAT (OPSIONAL)',
-                style: GoogleFonts.spaceGrotesk(fontSize: 11, fontWeight: FontWeight.w900, letterSpacing: 1.2, color: NeoBrutalColors.ink.withValues(alpha: 0.7))),
-            const SizedBox(height: 8),
-            GestureDetector(
-              onTap: _pickDeadline,
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                decoration: BoxDecoration(
-                  color: NeoBrutalColors.surface,
-                  border: Border.all(color: NeoBrutalColors.ink, width: 3),
-                ),
-                child: Row(
-                  children: [
-                    const Icon(Icons.calendar_month_rounded, size: 20),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Text(
-                        _deadline != null
-                            ? DateFormat('dd MMM yyyy').format(_deadline!)
-                            : 'Pilih tanggal tenggat',
-                        style: GoogleFonts.spaceGrotesk(fontSize: 16, fontWeight: FontWeight.w500),
-                      ),
-                    ),
-                    if (_deadline != null)
-                      GestureDetector(
-                        onTap: () => setState(() => _deadline = null),
-                        child: const Icon(Icons.close_rounded, size: 18),
-                      ),
-                  ],
+      appBar: const CatatInAppBar(subtitle: 'Buat Target'),
+      body: DotPatternBackground(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              NeoTextField(
+                controller: _nameController,
+                label: 'Nama Target',
+                hint: 'Contoh: Liburan Bali',
+                prefixIcon: Icons.flag_rounded,
+              ),
+              const SizedBox(height: 16),
+              NeoTextField(
+                controller: _amountController,
+                label: 'Target Jumlah (Rp)',
+                hint: '0',
+                keyboardType: TextInputType.number,
+                prefixIcon: Icons.payments_rounded,
+              ),
+              const SizedBox(height: 16),
+              // Deadline
+              Text(
+                'TENGGAT (OPSIONAL)',
+                style: GoogleFonts.spaceGrotesk(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: 1.2,
+                  color: NeoBrutalColors.ink.withValues(alpha: 0.7),
                 ),
               ),
-            ),
-            const SizedBox(height: 16),
-            // Account (optional)
-            Text('AKUN TERKAIT (OPSIONAL)',
-                style: GoogleFonts.spaceGrotesk(fontSize: 11, fontWeight: FontWeight.w900, letterSpacing: 1.2, color: NeoBrutalColors.ink.withValues(alpha: 0.7))),
-            const SizedBox(height: 8),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                _AccountChip(
-                  name: 'Tidak Ada',
-                  selected: _accountId == null,
-                  onTap: () => setState(() => _accountId = null),
+              const SizedBox(height: 8),
+              GestureDetector(
+                onTap: _pickDeadline,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 14,
+                  ),
+                  decoration: BoxDecoration(
+                    color: NeoBrutalColors.surface,
+                    border: Border.all(color: NeoBrutalColors.ink, width: 3),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.calendar_month_rounded, size: 20),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          _deadline != null
+                              ? DateFormat('dd MMM yyyy').format(_deadline!)
+                              : 'Pilih tanggal tenggat',
+                          style: GoogleFonts.spaceGrotesk(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ),
+                      if (_deadline != null)
+                        GestureDetector(
+                          onTap: () => setState(() => _deadline = null),
+                          child: const Icon(Icons.close_rounded, size: 18),
+                        ),
+                    ],
+                  ),
                 ),
-                ..._accounts.map((a) => _AccountChip(
+              ),
+              const SizedBox(height: 16),
+              // Account (optional)
+              Text(
+                'AKUN TERKAIT (OPSIONAL)',
+                style: GoogleFonts.spaceGrotesk(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: 1.2,
+                  color: NeoBrutalColors.ink.withValues(alpha: 0.7),
+                ),
+              ),
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  _AccountChip(
+                    name: 'Tidak Ada',
+                    selected: _accountId == null,
+                    onTap: () => setState(() => _accountId = null),
+                  ),
+                  ..._accounts.map(
+                    (a) => _AccountChip(
                       name: a.name,
                       selected: _accountId == a.id,
                       onTap: () => setState(() => _accountId = a.id),
-                    )),
-              ],
-            ),
-            const SizedBox(height: 32),
-            SizedBox(
-              width: double.infinity,
-              child: NeoButton(
-                label: 'BUAT TARGET',
-                icon: Icons.savings_rounded,
-                color: NeoBrutalColors.success,
-                onTap: _save,
+                    ),
+                  ),
+                ],
               ),
-            ),
-          ],
+              const SizedBox(height: 32),
+              SizedBox(
+                width: double.infinity,
+                child: NeoButton(
+                  label: 'BUAT TARGET',
+                  icon: Icons.savings_rounded,
+                  color: NeoBrutalColors.success,
+                  onTap: _save,
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -183,7 +210,11 @@ class _AddSavingsScreenState extends State<AddSavingsScreen> {
 }
 
 class _AccountChip extends StatelessWidget {
-  const _AccountChip({required this.name, required this.selected, required this.onTap});
+  const _AccountChip({
+    required this.name,
+    required this.selected,
+    required this.onTap,
+  });
   final String name;
   final bool selected;
   final VoidCallback onTap;
@@ -196,9 +227,18 @@ class _AccountChip extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         decoration: BoxDecoration(
           color: selected ? NeoBrutalColors.yellow : NeoBrutalColors.surface,
-          border: Border.all(color: NeoBrutalColors.ink, width: selected ? 3 : 2),
+          border: Border.all(
+            color: NeoBrutalColors.ink,
+            width: selected ? 3 : 2,
+          ),
           boxShadow: selected
-              ? [BoxShadow(color: NeoBrutalColors.ink, offset: const Offset(3, 3), blurRadius: 0)]
+              ? [
+                  BoxShadow(
+                    color: NeoBrutalColors.ink,
+                    offset: const Offset(3, 3),
+                    blurRadius: 0,
+                  ),
+                ]
               : null,
         ),
         child: Text(

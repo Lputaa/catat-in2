@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import '../../core/theme/neo_brutal_colors.dart';
 
 /// Standardized icon container with 3 size variants
 /// Follows Neo-Brutal design: 2px border, hard edges
@@ -52,7 +51,7 @@ class NeoIconContainer extends StatelessWidget {
 }
 
 enum NeoIconSize {
-  small,   // 32×32, icon 16
-  medium,  // 36×36, icon 18
-  large,   // 44×44, icon 22
+  small, // 32×32, icon 16
+  medium, // 36×36, icon 18
+  large, // 44×44, icon 22
 }

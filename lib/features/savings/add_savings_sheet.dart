@@ -11,22 +11,16 @@ import '../../data/models/account_model.dart';
 import '../../data/notifiers/savings_list_notifier.dart';
 import '../../data/repositories/savings_goal_repo.dart';
 import '../../data/repositories/account_repo.dart';
+import '../../shared/widgets/neo_dialog.dart';
+import '../../shared/widgets/neo_header_button.dart';
 
 class AddSavingsSheet extends ConsumerStatefulWidget {
   const AddSavingsSheet({super.key});
 
   static Future<bool?> show(BuildContext context) {
-    return showDialog<bool>(
+    return showNeoDialog<bool>(
       context: context,
-      barrierDismissible: true,
-      barrierColor: Colors.black54,
-      builder: (context) => Dialog(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        insetPadding:
-            const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
-        child: const AddSavingsSheet(),
-      ),
+      child: const AddSavingsSheet(),
     );
   }
 
@@ -112,9 +106,9 @@ class _AddSavingsSheetState extends ConsumerState<AddSavingsSheet> {
     } catch (e) {
       setState(() => _saving = false);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error: $e')));
       }
     }
   }
@@ -197,7 +191,9 @@ class _AddSavingsSheetState extends ConsumerState<AddSavingsSheet> {
       decoration: BoxDecoration(
         border: Border(
           bottom: BorderSide(
-              color: borderColor, width: AppConstants.borderSecondary),
+            color: borderColor,
+            width: AppConstants.borderSecondary,
+          ),
         ),
       ),
       child: Row(
@@ -208,10 +204,15 @@ class _AddSavingsSheetState extends ConsumerState<AddSavingsSheet> {
             decoration: BoxDecoration(
               color: NeoBrutalColors.secondary,
               border: Border.all(
-                  color: borderColor, width: AppConstants.borderSecondary),
+                color: borderColor,
+                width: AppConstants.borderSecondary,
+              ),
             ),
-            child: const Icon(Icons.savings_rounded,
-                size: 20, color: Colors.white),
+            child: const Icon(
+              Icons.savings_rounded,
+              size: 20,
+              color: Colors.white,
+            ),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -224,16 +225,10 @@ class _AddSavingsSheetState extends ConsumerState<AddSavingsSheet> {
               ),
             ),
           ),
-          GestureDetector(
+          NeoHeaderButton(
+            icon: Icons.close_rounded,
+            borderColor: borderColor,
             onTap: () => Navigator.pop(context),
-            child: Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                border: Border.all(
-                    color: borderColor, width: AppConstants.borderSecondary),
-              ),
-              child: const Icon(Icons.close_rounded, size: 18),
-            ),
           ),
         ],
       ),
@@ -247,7 +242,11 @@ class _AddSavingsSheetState extends ConsumerState<AddSavingsSheet> {
         fontSize: 10,
         fontWeight: FontWeight.w900,
         letterSpacing: 2.0,
-        color: NeoBrutalColors.ink.withValues(alpha: 0.5),
+        color:
+            (Theme.of(context).brightness == Brightness.dark
+                    ? NeoBrutalColors.inkDark
+                    : NeoBrutalColors.ink)
+                .withValues(alpha: 0.5),
       ),
     );
   }
@@ -258,23 +257,30 @@ class _AddSavingsSheetState extends ConsumerState<AddSavingsSheet> {
       decoration: BoxDecoration(
         color: NeoBrutalColors.surface,
         border: Border.all(
-            color: borderColor, width: AppConstants.borderSecondary),
+          color: borderColor,
+          width: AppConstants.borderSecondary,
+        ),
         boxShadow: [
           BoxShadow(
-              color: borderColor,
-              offset: const Offset(3, 3),
-              blurRadius: 0)
+            color: borderColor,
+            offset: const Offset(3, 3),
+            blurRadius: 0,
+          ),
         ],
       ),
       child: TextField(
         controller: _nameController,
-        style: GoogleFonts.spaceGrotesk(fontSize: 14, fontWeight: FontWeight.w600),
+        style: GoogleFonts.spaceGrotesk(
+          fontSize: 14,
+          fontWeight: FontWeight.w600,
+        ),
         decoration: InputDecoration(
           hintText: 'Contoh: Liburan Bali',
           hintStyle: GoogleFonts.spaceGrotesk(
-              fontSize: 14,
-              fontWeight: FontWeight.w500,
-              color: NeoBrutalColors.muted),
+            fontSize: 14,
+            fontWeight: FontWeight.w500,
+            color: NeoBrutalColors.muted,
+          ),
           border: InputBorder.none,
           contentPadding: const EdgeInsets.symmetric(vertical: 14),
           isDense: true,
@@ -307,7 +313,9 @@ class _AddSavingsSheetState extends ConsumerState<AddSavingsSheet> {
           decoration: BoxDecoration(
             color: NeoBrutalColors.surface,
             border: Border.all(
-                color: NeoBrutalColors.ink, width: AppConstants.borderPrimary),
+              color: NeoBrutalColors.ink,
+              width: AppConstants.borderPrimary,
+            ),
             boxShadow: [
               BoxShadow(
                 color: NeoBrutalColors.ink,
@@ -322,8 +330,7 @@ class _AddSavingsSheetState extends ConsumerState<AddSavingsSheet> {
                 padding: const EdgeInsets.only(right: 12),
                 decoration: const BoxDecoration(
                   border: Border(
-                    right: BorderSide(
-                        color: NeoBrutalColors.muted, width: 2),
+                    right: BorderSide(color: NeoBrutalColors.muted, width: 2),
                   ),
                 ),
                 child: Text(
@@ -375,12 +382,15 @@ class _AddSavingsSheetState extends ConsumerState<AddSavingsSheet> {
         decoration: BoxDecoration(
           color: NeoBrutalColors.surface,
           border: Border.all(
-              color: borderColor, width: AppConstants.borderSecondary),
+            color: borderColor,
+            width: AppConstants.borderSecondary,
+          ),
           boxShadow: [
             BoxShadow(
-                color: borderColor,
-                offset: const Offset(3, 3),
-                blurRadius: 0)
+              color: borderColor,
+              offset: const Offset(3, 3),
+              blurRadius: 0,
+            ),
           ],
         ),
         child: Row(
@@ -393,7 +403,9 @@ class _AddSavingsSheetState extends ConsumerState<AddSavingsSheet> {
                     ? DateFormat('dd MMM yyyy').format(_deadline!)
                     : 'Pilih tanggal tenggat',
                 style: GoogleFonts.spaceGrotesk(
-                    fontSize: 12, fontWeight: FontWeight.w600),
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
             ),
             if (_deadline != null)
@@ -412,23 +424,36 @@ class _AddSavingsSheetState extends ConsumerState<AddSavingsSheet> {
       spacing: 8,
       runSpacing: 8,
       children: [
-        _buildChip('Tidak Ada', _accountId == null,
-            () => setState(() => _accountId = null), borderColor),
-        ..._accounts.map((acc) => _buildChip(
-              acc.name,
-              _accountId == acc.id,
-              () => setState(() => _accountId = acc.id),
-              borderColor,
-              activeColor: NeoBrutalColors.secondary,
-            )),
+        _buildChip(
+          'Tidak Ada',
+          _accountId == null,
+          () => setState(() => _accountId = null),
+          borderColor,
+        ),
+        ..._accounts.map(
+          (acc) => _buildChip(
+            acc.name,
+            _accountId == acc.id,
+            () => setState(() => _accountId = acc.id),
+            borderColor,
+            activeColor: NeoBrutalColors.secondary,
+          ),
+        ),
       ],
     );
   }
 
-  Widget _buildChip(String label, bool isActive, VoidCallback onTap,
-      Color borderColor,
-      {Color? activeColor}) {
+  Widget _buildChip(
+    String label,
+    bool isActive,
+    VoidCallback onTap,
+    Color borderColor, {
+    Color? activeColor,
+  }) {
     final color = activeColor ?? NeoBrutalColors.yellow;
+    final inactiveBg = Theme.of(context).brightness == Brightness.dark
+        ? NeoBrutalColors.bgDark
+        : NeoBrutalColors.bg;
     return GestureDetector(
       onTap: () {
         HapticFeedback.selectionClick();
@@ -438,23 +463,34 @@ class _AddSavingsSheetState extends ConsumerState<AddSavingsSheet> {
         duration: AppConstants.animButton,
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         decoration: BoxDecoration(
-          color: isActive ? color : Colors.transparent,
+          color: isActive ? color : inactiveBg,
           border: Border.all(
-              color: borderColor, width: AppConstants.borderSecondary),
+            color: borderColor,
+            width: AppConstants.borderSecondary,
+          ),
           boxShadow: isActive
               ? []
-              : [BoxShadow(color: borderColor, offset: const Offset(3, 3), blurRadius: 0)],
+              : [
+                  BoxShadow(
+                    color: borderColor,
+                    offset: const Offset(3, 3),
+                    blurRadius: 0,
+                  ),
+                ],
         ),
         transform: isActive
             ? (Matrix4.identity()..translateByDouble(1.5, 1.5, 0.0, 1.0))
             : Matrix4.identity(),
-        child: Text(label.toUpperCase(),
-            style: GoogleFonts.spaceGrotesk(
-                fontSize: 11,
-                fontWeight: isActive ? FontWeight.w900 : FontWeight.w700,
-                color: isActive
-                    ? (activeColor != null ? Colors.white : NeoBrutalColors.ink)
-                    : NeoBrutalColors.ink)),
+        child: Text(
+          label.toUpperCase(),
+          style: GoogleFonts.spaceGrotesk(
+            fontSize: 11,
+            fontWeight: isActive ? FontWeight.w900 : FontWeight.w700,
+            color: isActive
+                ? (activeColor != null ? Colors.white : NeoBrutalColors.ink)
+                : NeoBrutalColors.ink,
+          ),
+        ),
       ),
     );
   }
@@ -469,31 +505,42 @@ class _AddSavingsSheetState extends ConsumerState<AddSavingsSheet> {
         decoration: BoxDecoration(
           color: _saving ? NeoBrutalColors.muted : NeoBrutalColors.success,
           border: Border.all(
-              color: borderColor, width: AppConstants.borderPrimary),
+            color: borderColor,
+            width: AppConstants.borderPrimary,
+          ),
           boxShadow: _saving
               ? []
-              : [BoxShadow(color: borderColor, offset: AppConstants.shadowDefault, blurRadius: 0)],
+              : [
+                  BoxShadow(
+                    color: borderColor,
+                    offset: AppConstants.shadowDefault,
+                    blurRadius: 0,
+                  ),
+                ],
         ),
         transform: _saving
-            ? (Matrix4.identity()
-              ..translateByDouble(AppConstants.shadowDefault.dx / 2,
-                  AppConstants.shadowDefault.dy / 2, 0.0, 1.0))
+            ? (Matrix4.identity()..translateByDouble(
+                AppConstants.shadowDefault.dx / 2,
+                AppConstants.shadowDefault.dy / 2,
+                0.0,
+                1.0,
+              ))
             : Matrix4.identity(),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             if (!_saving) ...[
-              const Icon(Icons.savings_rounded,
-                  size: 18, color: Colors.white),
+              const Icon(Icons.savings_rounded, size: 18, color: Colors.white),
               const SizedBox(width: 8),
             ],
             Text(
               _saving ? 'MENYIMPAN...' : 'BUAT TARGET',
               style: GoogleFonts.spaceGrotesk(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w900,
-                  letterSpacing: 1.0,
-                  color: Colors.white),
+                fontSize: 13,
+                fontWeight: FontWeight.w900,
+                letterSpacing: 1.0,
+                color: Colors.white,
+              ),
             ),
           ],
         ),

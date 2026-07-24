@@ -43,4 +43,5 @@ class AppConstants {
   static const Duration animProgress = Duration(milliseconds: 1200);
   static const Duration animToggle = Duration(milliseconds: 200);
   static const Duration animSegmented = Duration(milliseconds: 150);
+  static const Duration animDialog = Duration(milliseconds: 220);
 }

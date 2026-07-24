@@ -115,24 +115,26 @@ class TransactionListNotifier extends StateNotifier<TransactionListState> {
     state = state.copyWith(isLoading: true, clearError: true);
     try {
       final transactions = await _repo.getAll();
+      final now = DateTime.now();
       state = state.copyWith(
         transactions: transactions,
         isLoading: false,
+        filter: state.filter.copyWith(
+          dateRange: DateTimeRange(
+            start: DateTime(now.year, now.month, 1),
+            end: DateTime(now.year, now.month + 1, 0),
+          ),
+        ),
       );
     } catch (e) {
-      state = state.copyWith(
-        isLoading: false,
-        error: e.toString(),
-      );
+      state = state.copyWith(isLoading: false, error: e.toString());
     }
   }
 
   // ── Filter Methods ──
 
   void setTypeFilter(TransactionTypeFilter type) {
-    state = state.copyWith(
-      filter: state.filter.copyWith(typeFilter: type),
-    );
+    state = state.copyWith(filter: state.filter.copyWith(typeFilter: type));
   }
 
   void setDateRange(DateTimeRange? range) {
@@ -144,6 +146,32 @@ class TransactionListNotifier extends StateNotifier<TransactionListState> {
     );
   }
 
+  // ── Monthly Period Navigation ──
+
+  /// Scope the list to the full calendar month that contains [month].
+  void setMonthPeriod(DateTime month) {
+    state = state.copyWith(
+      filter: state.filter.copyWith(
+        dateRange: DateTimeRange(
+          start: DateTime(month.year, month.month, 1),
+          end: DateTime(month.year, month.month + 1, 0),
+        ),
+      ),
+    );
+  }
+
+  void previousMonth() {
+    final anchor = state.filter.dateRange?.start ?? DateTime.now();
+    setMonthPeriod(DateTime(anchor.year, anchor.month - 1, 1));
+  }
+
+  void nextMonth() {
+    final anchor = state.filter.dateRange?.start ?? DateTime.now();
+    setMonthPeriod(DateTime(anchor.year, anchor.month + 1, 1));
+  }
+
+  void goToCurrentMonth() => setMonthPeriod(DateTime.now());
+
   void setAccount(String? accountId) {
     state = state.copyWith(
       filter: state.filter.copyWith(
@@ -154,15 +182,11 @@ class TransactionListNotifier extends StateNotifier<TransactionListState> {
   }
 
   void setSortOrder(SortOrder sort) {
-    state = state.copyWith(
-      filter: state.filter.copyWith(sortOrder: sort),
-    );
+    state = state.copyWith(filter: state.filter.copyWith(sortOrder: sort));
   }
 
   void setSearchQuery(String query) {
-    state = state.copyWith(
-      filter: state.filter.copyWith(searchQuery: query),
-    );
+    state = state.copyWith(filter: state.filter.copyWith(searchQuery: query));
   }
 
   void applyFilter(TransactionFilterState filter) {
@@ -170,7 +194,15 @@ class TransactionListNotifier extends StateNotifier<TransactionListState> {
   }
 
   void resetFilter() {
-    state = state.copyWith(filter: const TransactionFilterState());
+    final now = DateTime.now();
+    state = state.copyWith(
+      filter: TransactionFilterState(
+        dateRange: DateTimeRange(
+          start: DateTime(now.year, now.month, 1),
+          end: DateTime(now.year, now.month + 1, 0),
+        ),
+      ),
+    );
   }
 
   // ── CRUD Methods (Sync Update) ──
@@ -180,9 +212,7 @@ class TransactionListNotifier extends StateNotifier<TransactionListState> {
       // DB first
       await _repo.insert(tx);
       // Then state (optimistic - add to front since newest)
-      state = state.copyWith(
-        transactions: [tx, ...state.transactions],
-      );
+      state = state.copyWith(transactions: [tx, ...state.transactions]);
     } catch (e) {
       // Rollback: refetch from DB
       await _refreshFromDb();
@@ -229,9 +259,7 @@ class TransactionListNotifier extends StateNotifier<TransactionListState> {
       // DB first
       await _repo.insert(tx);
       // Then state (add back)
-      state = state.copyWith(
-        transactions: [tx, ...state.transactions],
-      );
+      state = state.copyWith(transactions: [tx, ...state.transactions]);
     } catch (e) {
       await _refreshFromDb();
       rethrow;
@@ -245,10 +273,7 @@ class TransactionListNotifier extends StateNotifier<TransactionListState> {
   Future<void> _refreshFromDb() async {
     try {
       final transactions = await _repo.getAll();
-      state = state.copyWith(
-        transactions: transactions,
-        clearError: true,
-      );
+      state = state.copyWith(transactions: transactions, clearError: true);
     } catch (e) {
       state = state.copyWith(error: e.toString());
     }
@@ -258,8 +283,8 @@ class TransactionListNotifier extends StateNotifier<TransactionListState> {
 // ── Provider ──
 final transactionListProvider =
     StateNotifierProvider<TransactionListNotifier, TransactionListState>(
-  (ref) => TransactionListNotifier(),
-);
+      (ref) => TransactionListNotifier(),
+    );
 
 // Convenience providers for computed values
 final filteredTransactionsProvider = Provider<List<TransactionModel>>((ref) {

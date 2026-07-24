@@ -18,7 +18,7 @@ class DatabaseHelper {
     final path = join(await getDatabasesPath(), 'catat_in.db');
     return openDatabase(
       path,
-      version: 3,
+      version: 4,
       onCreate: _onCreate,
       onUpgrade: _onUpgrade,
     );
@@ -51,6 +51,7 @@ class DatabaseHelper {
         amount REAL NOT NULL,
         category_id TEXT NOT NULL,
         account_id TEXT NOT NULL,
+        to_account_id TEXT,
         date INTEGER NOT NULL,
         note TEXT,
         FOREIGN KEY (category_id) REFERENCES categories(id),
@@ -115,19 +116,91 @@ class DatabaseHelper {
   Future<void> _seedCategories(Database db) async {
     final defaults = <Map<String, dynamic>>[
       // Expense categories
-      {'id': 'cat_makanan', 'name': 'Makanan', 'type': 'expense', 'icon': 'restaurant', 'color': 0xFFFF6B35},
-      {'id': 'cat_transport', 'name': 'Transportasi', 'type': 'expense', 'icon': 'directions_car', 'color': 0xFF4361EE},
-      {'id': 'cat_belanja', 'name': 'Belanja', 'type': 'expense', 'icon': 'shopping_bag', 'color': 0xFFB5179E},
-      {'id': 'cat_hiburan', 'name': 'Hiburan', 'type': 'expense', 'icon': 'movie', 'color': 0xFFFFD60A},
-      {'id': 'cat_kesehatan', 'name': 'Kesehatan', 'type': 'expense', 'icon': 'local_hospital', 'color': 0xFF06D6A0},
-      {'id': 'cat_tagihan', 'name': 'Tagihan', 'type': 'expense', 'icon': 'receipt_long', 'color': 0xFFEF476F},
-      {'id': 'cat_pendidikan', 'name': 'Pendidikan', 'type': 'expense', 'icon': 'school', 'color': 0xFF00D9FF},
-      {'id': 'cat_lainnya_exp', 'name': 'Lainnya', 'type': 'expense', 'icon': 'more_horiz', 'color': 0xFFE5E5E5},
+      {
+        'id': 'cat_makanan',
+        'name': 'Makanan',
+        'type': 'expense',
+        'icon': 'restaurant',
+        'color': 0xFFFF6B35,
+      },
+      {
+        'id': 'cat_transport',
+        'name': 'Transportasi',
+        'type': 'expense',
+        'icon': 'directions_car',
+        'color': 0xFF4361EE,
+      },
+      {
+        'id': 'cat_belanja',
+        'name': 'Belanja',
+        'type': 'expense',
+        'icon': 'shopping_bag',
+        'color': 0xFFB5179E,
+      },
+      {
+        'id': 'cat_hiburan',
+        'name': 'Hiburan',
+        'type': 'expense',
+        'icon': 'movie',
+        'color': 0xFFFFD60A,
+      },
+      {
+        'id': 'cat_kesehatan',
+        'name': 'Kesehatan',
+        'type': 'expense',
+        'icon': 'local_hospital',
+        'color': 0xFF06D6A0,
+      },
+      {
+        'id': 'cat_tagihan',
+        'name': 'Tagihan',
+        'type': 'expense',
+        'icon': 'receipt_long',
+        'color': 0xFFEF476F,
+      },
+      {
+        'id': 'cat_pendidikan',
+        'name': 'Pendidikan',
+        'type': 'expense',
+        'icon': 'school',
+        'color': 0xFF00D9FF,
+      },
+      {
+        'id': 'cat_lainnya_exp',
+        'name': 'Lainnya',
+        'type': 'expense',
+        'icon': 'more_horiz',
+        'color': 0xFFE5E5E5,
+      },
       // Income categories
-      {'id': 'cat_gaji', 'name': 'Gaji', 'type': 'income', 'icon': 'work', 'color': 0xFF06D6A0},
-      {'id': 'cat_bonus', 'name': 'Bonus', 'type': 'income', 'icon': 'card_giftcard', 'color': 0xFFFFD60A},
-      {'id': 'cat_investasi', 'name': 'Investasi', 'type': 'income', 'icon': 'trending_up', 'color': 0xFFFF9F1C},
-      {'id': 'cat_lainnya_inc', 'name': 'Lainnya', 'type': 'income', 'icon': 'more_horiz', 'color': 0xFFE5E5E5},
+      {
+        'id': 'cat_gaji',
+        'name': 'Gaji',
+        'type': 'income',
+        'icon': 'work',
+        'color': 0xFF06D6A0,
+      },
+      {
+        'id': 'cat_bonus',
+        'name': 'Bonus',
+        'type': 'income',
+        'icon': 'card_giftcard',
+        'color': 0xFFFFD60A,
+      },
+      {
+        'id': 'cat_investasi',
+        'name': 'Investasi',
+        'type': 'income',
+        'icon': 'trending_up',
+        'color': 0xFFFF9F1C,
+      },
+      {
+        'id': 'cat_lainnya_inc',
+        'name': 'Lainnya',
+        'type': 'income',
+        'icon': 'more_horiz',
+        'color': 0xFFE5E5E5,
+      },
     ];
     for (final cat in defaults) {
       await db.insert('categories', cat);
@@ -174,13 +247,34 @@ class DatabaseHelper {
         )
       ''');
     }
+    if (oldVersion < 4) {
+      // Transfer support: destination account for transfer-type transactions.
+      await db.execute(
+        'ALTER TABLE transactions ADD COLUMN to_account_id TEXT',
+      );
+    }
   }
 
   Future<void> _seedAccounts(Database db) async {
     final defaults = <Map<String, dynamic>>[
-      {'id': 'acc_tunai', 'name': 'Tunai', 'initial_balance': 0, 'type': 'cash'},
-      {'id': 'acc_bank', 'name': 'Rekening Bank', 'initial_balance': 0, 'type': 'bank'},
-      {'id': 'acc_ewallet', 'name': 'E-Wallet', 'initial_balance': 0, 'type': 'ewallet'},
+      {
+        'id': 'acc_tunai',
+        'name': 'Tunai',
+        'initial_balance': 0,
+        'type': 'cash',
+      },
+      {
+        'id': 'acc_bank',
+        'name': 'Rekening Bank',
+        'initial_balance': 0,
+        'type': 'bank',
+      },
+      {
+        'id': 'acc_ewallet',
+        'name': 'E-Wallet',
+        'initial_balance': 0,
+        'type': 'ewallet',
+      },
     ];
     for (final acc in defaults) {
       await db.insert('accounts', acc);

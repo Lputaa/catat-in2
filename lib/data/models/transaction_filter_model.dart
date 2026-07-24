@@ -39,12 +39,30 @@ class TransactionFilterState {
 
   bool get isFiltered =>
       typeFilter != TransactionTypeFilter.all ||
-      dateRange != null ||
+      (dateRange != null && !isFullMonthRange) ||
       accountId != null ||
       sortOrder != SortOrder.newest ||
       searchQuery.isNotEmpty;
 
   bool get hasDateRange => dateRange != null;
+
+  /// True when [dateRange] spans exactly one full calendar month
+  /// (day 1 → last day). Used to treat the monthly period scope as the
+  /// default view rather than a manual filter.
+  bool get isFullMonthRange {
+    final range = dateRange;
+    if (range == null) return false;
+    final s = range.start;
+    final e = range.end;
+    final lastDay = DateTime(s.year, s.month + 1, 0).day;
+    return s.day == 1 &&
+        e.year == s.year &&
+        e.month == s.month &&
+        e.day == lastDay;
+  }
+
+  /// A user-picked range that is NOT a plain full-month period.
+  bool get hasCustomRange => dateRange != null && !isFullMonthRange;
   bool get hasAccountFilter => accountId != null;
   bool get hasSearchQuery => searchQuery.isNotEmpty;
   bool get hasTypeFilter => typeFilter != TransactionTypeFilter.all;
@@ -55,8 +73,16 @@ class TransactionFilterState {
     }
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
-    final start = DateTime(dateRange!.start.year, dateRange!.start.month, dateRange!.start.day);
-    final end = DateTime(dateRange!.end.year, dateRange!.end.month, dateRange!.end.day);
+    final start = DateTime(
+      dateRange!.start.year,
+      dateRange!.start.month,
+      dateRange!.start.day,
+    );
+    final end = DateTime(
+      dateRange!.end.year,
+      dateRange!.end.month,
+      dateRange!.end.day,
+    );
 
     if (start == today && end == today) {
       return 'Hari Ini';

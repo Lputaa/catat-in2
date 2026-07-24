@@ -9,6 +9,8 @@ import '../../data/models/budget_model.dart';
 import '../../data/models/category_model.dart';
 import '../../data/notifiers/budget_list_notifier.dart';
 import '../../data/repositories/budget_repo.dart';
+import '../../shared/widgets/neo_dialog.dart';
+import '../../shared/widgets/neo_header_button.dart';
 
 class AddBudgetSheet extends ConsumerStatefulWidget {
   const AddBudgetSheet({
@@ -28,20 +30,12 @@ class AddBudgetSheet extends ConsumerStatefulWidget {
     required int month,
     List<CategoryModel>? availableCategories,
   }) {
-    return showDialog<bool>(
+    return showNeoDialog<bool>(
       context: context,
-      barrierDismissible: true,
-      barrierColor: Colors.black54,
-      builder: (context) => Dialog(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        insetPadding:
-            const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
-        child: AddBudgetSheet(
-          year: year,
-          month: month,
-          availableCategories: availableCategories,
-        ),
+      child: AddBudgetSheet(
+        year: year,
+        month: month,
+        availableCategories: availableCategories,
       ),
     );
   }
@@ -82,9 +76,9 @@ class _AddBudgetSheetState extends ConsumerState<AddBudgetSheet> {
     );
     if (amount == null || amount <= 0 || _selectedCategory == null) {
       HapticFeedback.heavyImpact();
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Lengkapi semua field')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Lengkapi semua field')));
       return;
     }
 
@@ -105,9 +99,9 @@ class _AddBudgetSheetState extends ConsumerState<AddBudgetSheet> {
     } catch (e) {
       setState(() => _saving = false);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error: $e')));
       }
     }
   }
@@ -190,7 +184,9 @@ class _AddBudgetSheetState extends ConsumerState<AddBudgetSheet> {
       decoration: BoxDecoration(
         border: Border(
           bottom: BorderSide(
-              color: borderColor, width: AppConstants.borderSecondary),
+            color: borderColor,
+            width: AppConstants.borderSecondary,
+          ),
         ),
       ),
       child: Row(
@@ -201,7 +197,9 @@ class _AddBudgetSheetState extends ConsumerState<AddBudgetSheet> {
             decoration: BoxDecoration(
               color: NeoBrutalColors.green,
               border: Border.all(
-                  color: borderColor, width: AppConstants.borderSecondary),
+                color: borderColor,
+                width: AppConstants.borderSecondary,
+              ),
             ),
             child: const Icon(
               Icons.account_balance_wallet_rounded,
@@ -220,16 +218,10 @@ class _AddBudgetSheetState extends ConsumerState<AddBudgetSheet> {
               ),
             ),
           ),
-          GestureDetector(
+          NeoHeaderButton(
+            icon: Icons.close_rounded,
+            borderColor: borderColor,
             onTap: () => Navigator.pop(context),
-            child: Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                border: Border.all(
-                    color: borderColor, width: AppConstants.borderSecondary),
-              ),
-              child: const Icon(Icons.close_rounded, size: 18),
-            ),
           ),
         ],
       ),
@@ -241,8 +233,11 @@ class _AddBudgetSheetState extends ConsumerState<AddBudgetSheet> {
       padding: const EdgeInsets.all(40),
       child: Column(
         children: [
-          const Icon(Icons.check_circle_outline_rounded,
-              size: 64, color: NeoBrutalColors.success),
+          const Icon(
+            Icons.check_circle_outline_rounded,
+            size: 64,
+            color: NeoBrutalColors.success,
+          ),
           const SizedBox(height: 16),
           Text(
             'SEMUA KATEGORI SUDAH PUNYA BUDGET',
@@ -257,13 +252,13 @@ class _AddBudgetSheetState extends ConsumerState<AddBudgetSheet> {
           GestureDetector(
             onTap: () => Navigator.pop(context),
             child: Container(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
               decoration: BoxDecoration(
                 color: NeoBrutalColors.primary,
                 border: Border.all(
-                    color: NeoBrutalColors.ink,
-                    width: AppConstants.borderPrimary),
+                  color: NeoBrutalColors.ink,
+                  width: AppConstants.borderPrimary,
+                ),
               ),
               child: Text(
                 'TUTUP',
@@ -287,7 +282,11 @@ class _AddBudgetSheetState extends ConsumerState<AddBudgetSheet> {
         fontSize: 10,
         fontWeight: FontWeight.w900,
         letterSpacing: 2.0,
-        color: NeoBrutalColors.ink.withValues(alpha: 0.5),
+        color:
+            (Theme.of(context).brightness == Brightness.dark
+                    ? NeoBrutalColors.inkDark
+                    : NeoBrutalColors.ink)
+                .withValues(alpha: 0.5),
       ),
     );
   }
@@ -308,8 +307,7 @@ class _AddBudgetSheetState extends ConsumerState<AddBudgetSheet> {
           },
           child: AnimatedContainer(
             duration: AppConstants.animButton,
-            padding:
-                const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             decoration: BoxDecoration(
               color: selected ? cat.colorValue : NeoBrutalColors.surface,
               border: Border.all(
@@ -327,8 +325,7 @@ class _AddBudgetSheetState extends ConsumerState<AddBudgetSheet> {
                     ],
             ),
             transform: selected
-                ? (Matrix4.identity()
-                  ..translateByDouble(1.5, 1.5, 0.0, 1.0))
+                ? (Matrix4.identity()..translateByDouble(1.5, 1.5, 0.0, 1.0))
                 : Matrix4.identity(),
             child: Text(
               cat.name.toUpperCase(),
@@ -371,7 +368,9 @@ class _AddBudgetSheetState extends ConsumerState<AddBudgetSheet> {
           decoration: BoxDecoration(
             color: NeoBrutalColors.surface,
             border: Border.all(
-                color: borderColor, width: AppConstants.borderPrimary),
+              color: borderColor,
+              width: AppConstants.borderPrimary,
+            ),
             boxShadow: [
               BoxShadow(
                 color: borderColor,
@@ -386,8 +385,7 @@ class _AddBudgetSheetState extends ConsumerState<AddBudgetSheet> {
                 padding: const EdgeInsets.only(right: 12),
                 decoration: const BoxDecoration(
                   border: Border(
-                    right: BorderSide(
-                        color: NeoBrutalColors.muted, width: 2),
+                    right: BorderSide(color: NeoBrutalColors.muted, width: 2),
                   ),
                 ),
                 child: Text(
@@ -404,9 +402,7 @@ class _AddBudgetSheetState extends ConsumerState<AddBudgetSheet> {
                 child: TextField(
                   controller: _amountController,
                   keyboardType: TextInputType.number,
-                  inputFormatters: [
-                    FilteringTextInputFormatter.digitsOnly,
-                  ],
+                  inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                   style: GoogleFonts.spaceGrotesk(
                     fontSize: 32,
                     fontWeight: FontWeight.w900,
@@ -429,10 +425,7 @@ class _AddBudgetSheetState extends ConsumerState<AddBudgetSheet> {
             ],
           ),
         ),
-        Container(
-          height: 4,
-          color: NeoBrutalColors.green,
-        ),
+        Container(height: 4, color: NeoBrutalColors.green),
       ],
     );
   }
@@ -450,7 +443,9 @@ class _AddBudgetSheetState extends ConsumerState<AddBudgetSheet> {
         decoration: BoxDecoration(
           color: _saving ? NeoBrutalColors.muted : NeoBrutalColors.success,
           border: Border.all(
-              color: borderColor, width: AppConstants.borderPrimary),
+            color: borderColor,
+            width: AppConstants.borderPrimary,
+          ),
           boxShadow: _saving
               ? []
               : [
@@ -462,19 +457,22 @@ class _AddBudgetSheetState extends ConsumerState<AddBudgetSheet> {
                 ],
         ),
         transform: _saving
-            ? (Matrix4.identity()
-              ..translateByDouble(
-                  AppConstants.shadowDefault.dx / 2,
-                  AppConstants.shadowDefault.dy / 2,
-                  0.0,
-                  1.0))
+            ? (Matrix4.identity()..translateByDouble(
+                AppConstants.shadowDefault.dx / 2,
+                AppConstants.shadowDefault.dy / 2,
+                0.0,
+                1.0,
+              ))
             : Matrix4.identity(),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             if (!_saving) ...[
-              const Icon(Icons.check_circle_outline_rounded,
-                  size: 18, color: Colors.white),
+              const Icon(
+                Icons.check_circle_outline_rounded,
+                size: 18,
+                color: Colors.white,
+              ),
               const SizedBox(width: 8),
             ],
             Text(

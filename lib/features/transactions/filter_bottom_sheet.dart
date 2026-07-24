@@ -6,6 +6,7 @@ import '../../core/theme/neo_brutal_theme.dart';
 import '../../core/constants/app_constants.dart';
 import '../../data/models/transaction_filter_model.dart';
 import '../../data/models/account_model.dart';
+import '../../shared/widgets/neo_dialog.dart';
 
 class FilterBottomSheet extends StatefulWidget {
   const FilterBottomSheet({
@@ -28,20 +29,13 @@ class FilterBottomSheet extends StatefulWidget {
     required ValueChanged<TransactionFilterState> onApply,
     required VoidCallback onReset,
   }) {
-    return showDialog(
+    return showNeoDialog<void>(
       context: context,
-      barrierDismissible: true,
-      barrierColor: Colors.black54,
-      builder: (context) => Dialog(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
-        child: FilterBottomSheet(
-          initialFilter: currentFilter,
-          accounts: accounts,
-          onApply: onApply,
-          onReset: onReset,
-        ),
+      child: FilterBottomSheet(
+        initialFilter: currentFilter,
+        accounts: accounts,
+        onApply: onApply,
+        onReset: onReset,
       ),
     );
   }
@@ -68,13 +62,15 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
 
   void _apply() {
     HapticFeedback.mediumImpact();
-    widget.onApply(TransactionFilterState(
-      typeFilter: _typeFilter,
-      dateRange: _dateRange,
-      accountId: _accountId,
-      sortOrder: _sortOrder,
-      searchQuery: widget.initialFilter.searchQuery,
-    ));
+    widget.onApply(
+      TransactionFilterState(
+        typeFilter: _typeFilter,
+        dateRange: _dateRange,
+        accountId: _accountId,
+        sortOrder: _sortOrder,
+        searchQuery: widget.initialFilter.searchQuery,
+      ),
+    );
     Navigator.pop(context);
   }
 
@@ -138,10 +134,7 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
         mainAxisSize: MainAxisSize.min,
         children: [
           // Color accent bar
-          Container(
-            height: 8,
-            color: NeoBrutalColors.secondary,
-          ),
+          Container(height: 8, color: NeoBrutalColors.secondary),
 
           // Header
           Container(
@@ -149,7 +142,9 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
             decoration: BoxDecoration(
               border: Border(
                 bottom: BorderSide(
-                    color: borderColor, width: AppConstants.borderSecondary),
+                  color: borderColor,
+                  width: AppConstants.borderSecondary,
+                ),
               ),
             ),
             child: Row(
@@ -160,8 +155,9 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
                   decoration: BoxDecoration(
                     color: NeoBrutalColors.secondary,
                     border: Border.all(
-                        color: borderColor,
-                        width: AppConstants.borderSecondary),
+                      color: borderColor,
+                      width: AppConstants.borderSecondary,
+                    ),
                   ),
                   child: const Icon(
                     Icons.filter_list_rounded,
@@ -184,13 +180,16 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
                 GestureDetector(
                   onTap: _reset,
                   child: Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 6,
+                    ),
                     decoration: BoxDecoration(
                       color: NeoBrutalColors.danger.withValues(alpha: 0.1),
                       border: Border.all(
-                          color: NeoBrutalColors.danger,
-                          width: AppConstants.borderSecondary),
+                        color: NeoBrutalColors.danger,
+                        width: AppConstants.borderSecondary,
+                      ),
                     ),
                     child: Text(
                       'RESET',
@@ -217,9 +216,11 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
                     duration: AppConstants.animButton,
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
+                      color: _inactiveBg,
                       border: Border.all(
-                          color: borderColor,
-                          width: AppConstants.borderSecondary),
+                        color: borderColor,
+                        width: AppConstants.borderSecondary,
+                      ),
                       boxShadow: _pressed
                           ? []
                           : [
@@ -232,7 +233,7 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
                     ),
                     transform: _pressed
                         ? (Matrix4.identity()
-                          ..translateByDouble(2.0, 2.0, 0.0, 1.0))
+                            ..translateByDouble(2.0, 2.0, 0.0, 1.0))
                         : Matrix4.identity(),
                     child: const Icon(Icons.close_rounded, size: 18),
                   ),
@@ -277,7 +278,9 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
             decoration: BoxDecoration(
               border: Border(
                 top: BorderSide(
-                    color: borderColor, width: AppConstants.borderSecondary),
+                  color: borderColor,
+                  width: AppConstants.borderSecondary,
+                ),
               ),
             ),
             child: GestureDetector(
@@ -288,7 +291,9 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
                 decoration: BoxDecoration(
                   color: NeoBrutalColors.primary,
                   border: Border.all(
-                      color: borderColor, width: AppConstants.borderPrimary),
+                    color: borderColor,
+                    width: AppConstants.borderPrimary,
+                  ),
                   boxShadow: [
                     BoxShadow(
                       color: borderColor,
@@ -300,8 +305,11 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const Icon(Icons.check_rounded,
-                        size: 18, color: Colors.white),
+                    const Icon(
+                      Icons.check_rounded,
+                      size: 18,
+                      color: Colors.white,
+                    ),
                     const SizedBox(width: 8),
                     Text(
                       'TERAPKAN FILTER',
@@ -329,7 +337,11 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
         fontSize: 10,
         fontWeight: FontWeight.w900,
         letterSpacing: 2.0,
-        color: NeoBrutalColors.ink.withValues(alpha: 0.5),
+        color:
+            (Theme.of(context).brightness == Brightness.dark
+                    ? NeoBrutalColors.inkDark
+                    : NeoBrutalColors.ink)
+                .withValues(alpha: 0.5),
       ),
     );
   }
@@ -370,34 +382,37 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
     final presets = [
       (
         'Hari Ini',
-        DateTimeRange(
-            start: today, end: today.add(const Duration(days: 1)))
+        DateTimeRange(start: today, end: today.add(const Duration(days: 1))),
       ),
       (
         '7 Hari',
         DateTimeRange(
-            start: today.subtract(const Duration(days: 6)),
-            end: today.add(const Duration(days: 1)))
+          start: today.subtract(const Duration(days: 6)),
+          end: today.add(const Duration(days: 1)),
+        ),
       ),
       (
         'Bulan Ini',
         DateTimeRange(
-            start: DateTime(now.year, now.month, 1),
-            end: DateTime(now.year, now.month + 1, 1))
+          start: DateTime(now.year, now.month, 1),
+          end: DateTime(now.year, now.month + 1, 1),
+        ),
       ),
     ];
 
-    final isCustomDate = _dateRange != null &&
-        !presets.any((p) =>
-            _dateRange!.start == p.$2.start &&
-            _dateRange!.end == p.$2.end);
+    final isCustomDate =
+        _dateRange != null &&
+        !presets.any(
+          (p) => _dateRange!.start == p.$2.start && _dateRange!.end == p.$2.end,
+        );
 
     return Wrap(
       spacing: 8,
       runSpacing: 8,
       children: [
         ...presets.map((preset) {
-          final isActive = _dateRange != null &&
+          final isActive =
+              _dateRange != null &&
               _dateRange!.start == preset.$2.start &&
               _dateRange!.end == preset.$2.end;
           return _buildFilterChip(
@@ -413,12 +428,9 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
         GestureDetector(
           onTap: _selectDateRange,
           child: Container(
-            padding:
-                const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             decoration: BoxDecoration(
-              color: isCustomDate
-                  ? NeoBrutalColors.secondary
-                  : Colors.transparent,
+              color: isCustomDate ? NeoBrutalColors.secondary : _inactiveBg,
               border: Border.all(
                 color: borderColor,
                 width: AppConstants.borderSecondary,
@@ -434,8 +446,7 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
                     ],
             ),
             transform: isCustomDate
-                ? (Matrix4.identity()
-                  ..translateByDouble(1.5, 1.5, 0.0, 1.0))
+                ? (Matrix4.identity()..translateByDouble(1.5, 1.5, 0.0, 1.0))
                 : Matrix4.identity(),
             child: Row(
               mainAxisSize: MainAxisSize.min,
@@ -443,8 +454,7 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
                 Icon(
                   Icons.calendar_today_rounded,
                   size: 14,
-                  color:
-                      isCustomDate ? Colors.white : NeoBrutalColors.ink,
+                  color: isCustomDate ? Colors.white : NeoBrutalColors.ink,
                 ),
                 const SizedBox(width: 6),
                 Text(
@@ -453,10 +463,10 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
                       : 'Custom',
                   style: GoogleFonts.spaceGrotesk(
                     fontSize: 11,
-                    fontWeight:
-                        isCustomDate ? FontWeight.w900 : FontWeight.w600,
-                    color:
-                        isCustomDate ? Colors.white : NeoBrutalColors.ink,
+                    fontWeight: isCustomDate
+                        ? FontWeight.w900
+                        : FontWeight.w600,
+                    color: isCustomDate ? Colors.white : NeoBrutalColors.ink,
                   ),
                 ),
               ],
@@ -478,13 +488,15 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
           () => setState(() => _accountId = null),
           borderColor,
         ),
-        ...widget.accounts.map((acc) => _buildFilterChip(
-              acc.name,
-              _accountId == acc.id,
-              () => setState(() => _accountId = acc.id),
-              borderColor,
-              activeColor: NeoBrutalColors.secondary,
-            )),
+        ...widget.accounts.map(
+          (acc) => _buildFilterChip(
+            acc.name,
+            _accountId == acc.id,
+            () => setState(() => _accountId = acc.id),
+            borderColor,
+            activeColor: NeoBrutalColors.secondary,
+          ),
+        ),
       ],
     );
   }
@@ -522,6 +534,10 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
     );
   }
 
+  Color get _inactiveBg => Theme.of(context).brightness == Brightness.dark
+      ? NeoBrutalColors.bgDark
+      : NeoBrutalColors.bg;
+
   Widget _buildFilterChip(
     String label,
     bool isActive,
@@ -539,7 +555,7 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
         duration: AppConstants.animButton,
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         decoration: BoxDecoration(
-          color: isActive ? color : Colors.transparent,
+          color: isActive ? color : _inactiveBg,
           border: Border.all(
             color: borderColor,
             width: AppConstants.borderSecondary,
@@ -555,8 +571,7 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
                 ],
         ),
         transform: isActive
-            ? (Matrix4.identity()
-              ..translateByDouble(1.5, 1.5, 0.0, 1.0))
+            ? (Matrix4.identity()..translateByDouble(1.5, 1.5, 0.0, 1.0))
             : Matrix4.identity(),
         child: Text(
           label.toUpperCase(),
@@ -564,7 +579,11 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
             fontSize: 11,
             fontWeight: isActive ? FontWeight.w900 : FontWeight.w700,
             letterSpacing: 0.5,
-            color: isActive ? Colors.white : NeoBrutalColors.ink,
+            color: isActive
+                ? Colors.white
+                : (Theme.of(context).brightness == Brightness.dark
+                      ? NeoBrutalColors.inkDark
+                      : NeoBrutalColors.ink),
           ),
         ),
       ),

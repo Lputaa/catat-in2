@@ -361,8 +361,17 @@ class _BudgetListState extends ConsumerState<_BudgetList> {
         child: Container(
           padding: const EdgeInsets.all(24),
           decoration: BoxDecoration(
-            color: Theme.of(context).scaffoldBackgroundColor,
-            border: const Border(top: BorderSide(color: NeoBrutalColors.ink, width: 3)),
+            color: Theme.of(context).brightness == Brightness.dark
+                ? NeoBrutalColors.bgDark
+                : NeoBrutalColors.bg,
+            border: Border(
+              top: BorderSide(
+                color: Theme.of(context).brightness == Brightness.dark
+                    ? NeoBrutalColors.darkLine
+                    : NeoBrutalColors.ink,
+                width: 3,
+              ),
+            ),
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,

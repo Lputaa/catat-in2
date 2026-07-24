@@ -17,12 +17,14 @@ import '../../shared/widgets/catat_in_app_bar.dart';
 import '../../shared/widgets/neo_card.dart';
 import '../../shared/widgets/neo_icon_container.dart';
 import '../../shared/widgets/neo_empty_state.dart';
+import '../../shared/widgets/neo_header_button.dart';
 import 'add_transaction_sheet.dart';
 import 'filter_bottom_sheet.dart';
 
 // ── Providers ──
-final _categoryMapProvider =
-    FutureProvider<Map<String, CategoryModel>>((ref) async {
+final _categoryMapProvider = FutureProvider<Map<String, CategoryModel>>((
+  ref,
+) async {
   final cats = await CategoryRepo().getAll();
   return {for (final c in cats) c.id: c};
 });
@@ -31,8 +33,9 @@ final _accountsProvider = FutureProvider<List<AccountModel>>((ref) {
   return AccountRepo().getAll();
 });
 
-final _accountMapProvider =
-    FutureProvider<Map<String, AccountModel>>((ref) async {
+final _accountMapProvider = FutureProvider<Map<String, AccountModel>>((
+  ref,
+) async {
   final accs = await AccountRepo().getAll();
   return {for (final a in accs) a.id: a};
 });
@@ -78,8 +81,11 @@ class _TransactionScreenState extends ConsumerState<TransactionScreen> {
     final accMap = ref.watch(_accountMapProvider);
     final accounts = ref.watch(_accountsProvider);
     final filter = txState.filter;
-    final formatter =
-        NumberFormat.currency(locale: 'id_ID', symbol: 'Rp', decimalDigits: 0);
+    final formatter = NumberFormat.currency(
+      locale: 'id_ID',
+      symbol: 'Rp',
+      decimalDigits: 0,
+    );
 
     return Scaffold(
       appBar: CatatInAppBar(
@@ -88,7 +94,9 @@ class _TransactionScreenState extends ConsumerState<TransactionScreen> {
           IconButton(
             icon: Icon(
               _showSearch ? Icons.close_rounded : Icons.search_rounded,
-              color: NeoBrutalColors.ink,
+              color: Theme.of(context).brightness == Brightness.dark
+                  ? NeoBrutalColors.inkDark
+                  : NeoBrutalColors.ink,
             ),
             onPressed: _toggleSearch,
           ),
@@ -97,7 +105,9 @@ class _TransactionScreenState extends ConsumerState<TransactionScreen> {
               Icons.filter_list_rounded,
               color: filter.isFiltered
                   ? NeoBrutalColors.primary
-                  : NeoBrutalColors.ink,
+                  : (Theme.of(context).brightness == Brightness.dark
+                        ? NeoBrutalColors.inkDark
+                        : NeoBrutalColors.ink),
             ),
             onPressed: () {
               HapticFeedback.mediumImpact();
@@ -121,12 +131,18 @@ class _TransactionScreenState extends ConsumerState<TransactionScreen> {
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
               child: NeoCard(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 4,
+                ),
                 borderOn: true,
                 child: Row(
                   children: [
-                    const Icon(Icons.search_rounded,
-                        size: 20, color: NeoBrutalColors.muted),
+                    const Icon(
+                      Icons.search_rounded,
+                      size: 20,
+                      color: NeoBrutalColors.muted,
+                    ),
                     const SizedBox(width: 8),
                     Expanded(
                       child: TextField(
@@ -141,8 +157,9 @@ class _TransactionScreenState extends ConsumerState<TransactionScreen> {
                             color: NeoBrutalColors.muted,
                           ),
                           border: InputBorder.none,
-                          contentPadding:
-                              const EdgeInsets.symmetric(vertical: 12),
+                          contentPadding: const EdgeInsets.symmetric(
+                            vertical: 12,
+                          ),
                         ),
                         style: GoogleFonts.spaceGrotesk(
                           fontSize: 14,
@@ -156,13 +173,19 @@ class _TransactionScreenState extends ConsumerState<TransactionScreen> {
                           _searchController.clear();
                           _onSearchChanged('');
                         },
-                        child: const Icon(Icons.close_rounded,
-                            size: 18, color: NeoBrutalColors.muted),
+                        child: const Icon(
+                          Icons.close_rounded,
+                          size: 18,
+                          color: NeoBrutalColors.muted,
+                        ),
                       ),
                   ],
                 ),
               ),
             ),
+
+          // Month period navigator
+          _buildMonthNavigator(filter),
 
           // Filter bar
           _buildFilterBar(filter),
@@ -197,15 +220,98 @@ class _TransactionScreenState extends ConsumerState<TransactionScreen> {
             Expanded(
               child: filteredTxs.isEmpty
                   ? _buildEmptyState(filter)
-                  : _buildGroupedList(
-                      filteredTxs, catMap, accMap, formatter),
+                  : _buildGroupedList(filteredTxs, catMap, accMap, formatter),
             ),
         ],
       ),
     );
   }
 
+  Widget _buildMonthNavigator(TransactionFilterState filter) {
+    final brightness = Theme.of(context).brightness;
+    final borderColor = NeoBrutalTheme.borderColor(brightness);
+    final surfaceColor = brightness == Brightness.light
+        ? NeoBrutalColors.surface
+        : NeoBrutalColors.surfaceDark;
+    final inkColor = brightness == Brightness.light
+        ? NeoBrutalColors.ink
+        : NeoBrutalColors.inkDark;
+
+    final anchor = filter.dateRange?.start ?? DateTime.now();
+    final isCustom = filter.hasCustomRange;
+    final label = isCustom
+        ? filter.dateRangeLabel.toUpperCase()
+        : DateFormat('MMMM yyyy', 'id_ID').format(anchor).toUpperCase();
+    final accent = isCustom ? NeoBrutalColors.secondary : inkColor;
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+      child: Row(
+        children: [
+          NeoHeaderButton(
+            icon: Icons.chevron_left_rounded,
+            borderColor: borderColor,
+            onTap: () =>
+                ref.read(transactionListProvider.notifier).previousMonth(),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: GestureDetector(
+              onTap: () {
+                HapticFeedback.selectionClick();
+                ref.read(transactionListProvider.notifier).goToCurrentMonth();
+              },
+              child: Container(
+                padding: const EdgeInsets.symmetric(vertical: 10),
+                decoration: BoxDecoration(
+                  color: surfaceColor,
+                  border: Border.all(
+                    color: borderColor,
+                    width: AppConstants.borderSecondary,
+                  ),
+                  boxShadow: NeoBrutalTheme.hardShadow(
+                    offset: const Offset(3, 3),
+                    brightness: brightness,
+                  ),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.event_rounded, size: 14, color: accent),
+                    const SizedBox(width: 6),
+                    Text(
+                      label,
+                      style: GoogleFonts.spaceGrotesk(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: 0.8,
+                        color: accent,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(width: 8),
+          NeoHeaderButton(
+            icon: Icons.chevron_right_rounded,
+            borderColor: borderColor,
+            onTap: () => ref.read(transactionListProvider.notifier).nextMonth(),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildFilterBar(TransactionFilterState filter) {
+    final brightness = Theme.of(context).brightness;
+    final surfaceColor = brightness == Brightness.light
+        ? NeoBrutalColors.surface
+        : NeoBrutalColors.surfaceDark;
+    final inkColor = brightness == Brightness.light
+        ? NeoBrutalColors.ink
+        : NeoBrutalColors.inkDark;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: Row(
@@ -234,9 +340,9 @@ class _TransactionScreenState extends ConsumerState<TransactionScreen> {
                   return Theme(
                     data: Theme.of(context).copyWith(
                       colorScheme: Theme.of(context).colorScheme.copyWith(
-                            primary: NeoBrutalColors.primary,
-                            onPrimary: Colors.white,
-                          ),
+                        primary: NeoBrutalColors.primary,
+                        onPrimary: Colors.white,
+                      ),
                     ),
                     child: child!,
                   );
@@ -247,18 +353,21 @@ class _TransactionScreenState extends ConsumerState<TransactionScreen> {
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
               decoration: BoxDecoration(
-                color: filter.hasDateRange
-                    ? NeoBrutalColors.secondary.withValues(alpha: 0.15)
-                    : NeoBrutalColors.surface,
+                color: filter.hasCustomRange
+                    ? Color.alphaBlend(
+                        NeoBrutalColors.secondary.withValues(alpha: 0.15),
+                        surfaceColor,
+                      )
+                    : surfaceColor,
                 border: Border.all(
-                  color: filter.hasDateRange
+                  color: filter.hasCustomRange
                       ? NeoBrutalColors.secondary
-                      : NeoBrutalColors.ink,
+                      : inkColor,
                   width: AppConstants.borderSecondary,
                 ),
                 boxShadow: NeoBrutalTheme.hardShadow(
                   offset: const Offset(3, 3),
-                  brightness: Theme.of(context).brightness,
+                  brightness: brightness,
                 ),
               ),
               child: Row(
@@ -267,11 +376,11 @@ class _TransactionScreenState extends ConsumerState<TransactionScreen> {
                   Icon(
                     Icons.calendar_today_rounded,
                     size: 14,
-                    color: filter.hasDateRange
+                    color: filter.hasCustomRange
                         ? NeoBrutalColors.secondary
-                        : NeoBrutalColors.ink,
+                        : inkColor,
                   ),
-                  if (filter.hasDateRange) ...[
+                  if (filter.hasCustomRange) ...[
                     const SizedBox(width: 4),
                     Text(
                       filter.dateRangeLabel,
@@ -291,8 +400,7 @@ class _TransactionScreenState extends ConsumerState<TransactionScreen> {
     );
   }
 
-  Widget _buildSummaryCard(
-      TransactionSummary summary, NumberFormat formatter) {
+  Widget _buildSummaryCard(TransactionSummary summary, NumberFormat formatter) {
     final isPositive = summary.net >= 0;
     final brightness = Theme.of(context).brightness;
     final borderColor = NeoBrutalTheme.borderColor(brightness);
@@ -306,14 +414,21 @@ class _TransactionScreenState extends ConsumerState<TransactionScreen> {
             width: double.infinity,
             padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 14),
             decoration: BoxDecoration(
-              color: isPositive ? NeoBrutalColors.success : NeoBrutalColors.danger,
-              border: Border.all(color: borderColor, width: AppConstants.borderSecondary),
+              color: isPositive
+                  ? NeoBrutalColors.success
+                  : NeoBrutalColors.danger,
+              border: Border.all(
+                color: borderColor,
+                width: AppConstants.borderSecondary,
+              ),
             ),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Icon(
-                  isPositive ? Icons.trending_up_rounded : Icons.trending_down_rounded,
+                  isPositive
+                      ? Icons.trending_up_rounded
+                      : Icons.trending_down_rounded,
                   size: 16,
                   color: Colors.white,
                 ),
@@ -371,11 +486,7 @@ class _TransactionScreenState extends ConsumerState<TransactionScreen> {
                   ),
                 ),
                 // Divider
-                Container(
-                  width: 1,
-                  height: 40,
-                  color: borderColor,
-                ),
+                Container(width: 1, height: 40, color: borderColor),
                 // Keluar
                 Expanded(
                   child: Padding(
@@ -448,12 +559,16 @@ class _TransactionScreenState extends ConsumerState<TransactionScreen> {
         final dateKey = sortedKeys[index];
         final txs = groups[dateKey]!;
         final date = DateTime.parse(dateKey);
-        final dayTotal = txs.fold<double>(
-          0,
-          (sum, tx) =>
-              sum +
-              (tx.type == TransactionType.income ? tx.amount : -tx.amount),
-        );
+        final dayTotal = txs.fold<double>(0, (sum, tx) {
+          switch (tx.type) {
+            case TransactionType.income:
+              return sum + tx.amount;
+            case TransactionType.expense:
+              return sum - tx.amount;
+            case TransactionType.transfer:
+              return sum; // Neutral: money stays within your wallets.
+          }
+        });
 
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -486,8 +601,10 @@ class _TransactionScreenState extends ConsumerState<TransactionScreen> {
               ),
             ),
             // Transactions for this date
-            ...txs.map((tx) => _buildTransactionItem(tx, cats, accs, formatter)),
-            const SizedBox(height: 8),
+            ...txs.map(
+              (tx) => _buildTransactionItem(tx, cats, accs, formatter),
+            ),
+            const SizedBox(height: 16),
           ],
         );
       },
@@ -503,9 +620,7 @@ class _TransactionScreenState extends ConsumerState<TransactionScreen> {
     if (dateOnly == today) return 'HARI INI';
     if (dateOnly == yesterday) return 'KEMARIN';
 
-    return DateFormat('EEEE, dd MMMM yyyy', 'id_ID')
-        .format(date)
-        .toUpperCase();
+    return DateFormat('EEEE, dd MMMM yyyy', 'id_ID').format(date).toUpperCase();
   }
 
   Widget _buildTransactionItem(
@@ -517,21 +632,26 @@ class _TransactionScreenState extends ConsumerState<TransactionScreen> {
     final cat = cats[tx.categoryId];
     final acc = accs[tx.accountId];
     final isIncome = tx.type == TransactionType.income;
+    final isTransfer = tx.type == TransactionType.transfer;
+    final toAcc = accs[tx.toAccountId];
 
     return Padding(
-      padding: const EdgeInsets.only(bottom: 6),
+      padding: const EdgeInsets.only(bottom: 10),
       child: Dismissible(
         key: ValueKey(tx.id),
         direction: DismissDirection.horizontal,
-        // Swipe right = Edit
+        // Swipe left (endToStart) = Delete
         secondaryBackground: Container(
           alignment: Alignment.centerRight,
           padding: const EdgeInsets.only(right: 24),
           color: NeoBrutalColors.danger,
-          child:
-              const Icon(Icons.delete_rounded, color: Colors.white, size: 28),
+          child: const Icon(
+            Icons.delete_rounded,
+            color: Colors.white,
+            size: 28,
+          ),
         ),
-        // Swipe left = Delete
+        // Swipe right (startToEnd) = Edit
         background: Container(
           alignment: Alignment.centerLeft,
           padding: const EdgeInsets.only(left: 24),
@@ -579,10 +699,14 @@ class _TransactionScreenState extends ConsumerState<TransactionScreen> {
               children: [
                 // Type indicator
                 NeoIconContainer(
-                  icon: isIncome
+                  icon: isTransfer
+                      ? Icons.swap_horiz_rounded
+                      : isIncome
                       ? Icons.arrow_downward_rounded
                       : Icons.arrow_upward_rounded,
-                  color: isIncome
+                  color: isTransfer
+                      ? NeoBrutalColors.secondary
+                      : isIncome
                       ? NeoBrutalColors.success
                       : NeoBrutalColors.danger,
                   size: NeoIconSize.medium,
@@ -594,7 +718,7 @@ class _TransactionScreenState extends ConsumerState<TransactionScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        tx.note ?? 'Transaksi',
+                        tx.note ?? (isTransfer ? 'Transfer' : 'Transaksi'),
                         style: GoogleFonts.spaceGrotesk(
                           fontSize: 13,
                           fontWeight: FontWeight.w700,
@@ -603,49 +727,69 @@ class _TransactionScreenState extends ConsumerState<TransactionScreen> {
                         overflow: TextOverflow.ellipsis,
                       ),
                       const SizedBox(height: 3),
-                      Row(
-                        children: [
-                          if (cat != null) ...[
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 5, vertical: 1),
-                              decoration: BoxDecoration(
-                                border: Border.all(
-                                    color: cat.colorValue, width: 1.5),
-                              ),
-                              child: Text(
-                                cat.name.toUpperCase(),
-                                style: GoogleFonts.spaceGrotesk(
-                                  fontSize: 8,
-                                  fontWeight: FontWeight.w700,
-                                  letterSpacing: 0.3,
-                                  color: cat.colorValue,
+                      if (isTransfer)
+                        Text(
+                          '${acc?.name ?? '?'} → ${toAcc?.name ?? '?'}',
+                          style: GoogleFonts.spaceGrotesk(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w600,
+                            color: NeoBrutalColors.muted,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        )
+                      else
+                        Row(
+                          children: [
+                            if (cat != null) ...[
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 5,
+                                  vertical: 1,
+                                ),
+                                decoration: BoxDecoration(
+                                  border: Border.all(
+                                    color: cat.colorValue,
+                                    width: 1.5,
+                                  ),
+                                ),
+                                child: Text(
+                                  cat.name.toUpperCase(),
+                                  style: GoogleFonts.spaceGrotesk(
+                                    fontSize: 8,
+                                    fontWeight: FontWeight.w700,
+                                    letterSpacing: 0.3,
+                                    color: cat.colorValue,
+                                  ),
                                 ),
                               ),
-                            ),
-                            const SizedBox(width: 5),
-                          ],
-                          if (acc != null)
-                            Text(
-                              acc.name,
-                              style: GoogleFonts.spaceGrotesk(
-                                fontSize: 10,
-                                fontWeight: FontWeight.w500,
-                                color: NeoBrutalColors.muted,
+                              const SizedBox(width: 5),
+                            ],
+                            if (acc != null)
+                              Text(
+                                acc.name,
+                                style: GoogleFonts.spaceGrotesk(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w500,
+                                  color: NeoBrutalColors.muted,
+                                ),
                               ),
-                            ),
-                        ],
-                      ),
+                          ],
+                        ),
                     ],
                   ),
                 ),
                 // Amount
                 Text(
-                  '${isIncome ? '+' : '-'}${formatter.format(tx.amount)}',
+                  isTransfer
+                      ? formatter.format(tx.amount)
+                      : '${isIncome ? '+' : '-'}${formatter.format(tx.amount)}',
                   style: GoogleFonts.spaceGrotesk(
                     fontSize: 13,
                     fontWeight: FontWeight.w800,
-                    color: isIncome
+                    color: isTransfer
+                        ? NeoBrutalColors.secondary
+                        : isIncome
                         ? NeoBrutalColors.success
                         : NeoBrutalColors.danger,
                   ),
@@ -659,24 +803,47 @@ class _TransactionScreenState extends ConsumerState<TransactionScreen> {
   }
 
   Widget _buildEmptyState(TransactionFilterState filter) {
-    final isFiltered = filter.isFiltered;
+    // Manual filters active (type/search/account/custom range/sort)
+    if (filter.isFiltered) {
+      return NeoEmptyState(
+        icon: Icons.search_off_rounded,
+        title: 'Tidak Ada Transaksi',
+        subtitle: 'Coba ubah filter atau tambah transaksi baru',
+        ctaLabel: 'Reset Filter',
+        ctaColor: NeoBrutalColors.secondary,
+        onCta: () => ref.read(transactionListProvider.notifier).resetFilter(),
+      );
+    }
 
-    return NeoEmptyState(
-      icon: isFiltered ? Icons.search_off_rounded : Icons.receipt_long_rounded,
-      title: isFiltered ? 'Tidak Ada Transaksi' : 'Belum Ada Transaksi',
-      subtitle: isFiltered
-          ? 'Coba ubah filter atau tambah transaksi baru'
-          : 'Tekan tombol + untuk memulai',
-      ctaLabel: isFiltered ? 'Reset Filter' : null,
+    // Only a monthly period is active — the month simply has no transactions.
+    final now = DateTime.now();
+    final anchor = filter.dateRange?.start ?? now;
+    final atCurrentMonth = anchor.year == now.year && anchor.month == now.month;
+    if (filter.dateRange != null && !atCurrentMonth) {
+      return NeoEmptyState(
+        icon: Icons.event_busy_rounded,
+        title: 'Tidak Ada Transaksi',
+        subtitle: 'Belum ada transaksi di periode ini',
+        ctaLabel: 'Ke Bulan Ini',
+        ctaColor: NeoBrutalColors.secondary,
+        onCta: () =>
+            ref.read(transactionListProvider.notifier).goToCurrentMonth(),
+      );
+    }
+
+    return const NeoEmptyState(
+      icon: Icons.receipt_long_rounded,
+      title: 'Belum Ada Transaksi',
+      subtitle: 'Tekan tombol + untuk memulai',
       ctaColor: NeoBrutalColors.secondary,
-      onCta: isFiltered
-          ? () => ref.read(transactionListProvider.notifier).resetFilter()
-          : null,
     );
   }
 
   void _openEditScreen(
-      BuildContext context, WidgetRef ref, TransactionModel tx) async {
+    BuildContext context,
+    WidgetRef ref,
+    TransactionModel tx,
+  ) async {
     final result = await AddTransactionSheet.show(context, editTransaction: tx);
     if (result == true) {
       // Refresh from DB to sync any changes
@@ -699,6 +866,12 @@ class _ThreeDSegmentedControl extends StatelessWidget {
   Widget build(BuildContext context) {
     final brightness = Theme.of(context).brightness;
     final borderColor = NeoBrutalTheme.borderColor(brightness);
+    final surfaceColor = brightness == Brightness.light
+        ? NeoBrutalColors.surface
+        : NeoBrutalColors.surfaceDark;
+    final inkColor = brightness == Brightness.light
+        ? NeoBrutalColors.ink
+        : NeoBrutalColors.inkDark;
 
     final items = [
       (TransactionTypeFilter.all, 'Semua', NeoBrutalColors.yellow),
@@ -709,7 +882,9 @@ class _ThreeDSegmentedControl extends StatelessWidget {
     return Container(
       decoration: BoxDecoration(
         border: Border.all(
-            color: borderColor, width: AppConstants.borderPrimary),
+          color: borderColor,
+          width: AppConstants.borderPrimary,
+        ),
         boxShadow: [
           BoxShadow(
             color: borderColor,
@@ -731,7 +906,7 @@ class _ThreeDSegmentedControl extends StatelessWidget {
                 duration: AppConstants.animButton,
                 padding: const EdgeInsets.symmetric(vertical: 10),
                 decoration: BoxDecoration(
-                  color: isSelected ? item.$3 : NeoBrutalColors.surface,
+                  color: isSelected ? item.$3 : surfaceColor,
                   border: Border(
                     right: BorderSide(
                       color: borderColor,
@@ -750,21 +925,22 @@ class _ThreeDSegmentedControl extends StatelessWidget {
                 ),
                 transform: isSelected
                     ? (Matrix4.identity()
-                      ..translateByDouble(1.0, 1.0, 0.0, 1.0))
+                        ..translateByDouble(1.0, 1.0, 0.0, 1.0))
                     : Matrix4.identity(),
                 child: Center(
                   child: Text(
                     item.$2.toUpperCase(),
                     style: GoogleFonts.spaceGrotesk(
                       fontSize: 11,
-                      fontWeight:
-                          isSelected ? FontWeight.w900 : FontWeight.w700,
+                      fontWeight: isSelected
+                          ? FontWeight.w900
+                          : FontWeight.w700,
                       letterSpacing: 0.8,
                       color: isSelected
                           ? (item.$3 == NeoBrutalColors.yellow
-                              ? NeoBrutalColors.ink
-                              : Colors.white)
-                          : NeoBrutalColors.ink,
+                                ? NeoBrutalColors.ink
+                                : Colors.white)
+                          : inkColor,
                     ),
                   ),
                 ),

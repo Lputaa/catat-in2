@@ -9,19 +9,26 @@ import '../../data/repositories/account_repo.dart';
 import '../../shared/widgets/neo_card.dart';
 import '../../shared/widgets/neo_button.dart';
 import '../../shared/widgets/neo_text_field.dart';
+import '../../shared/widgets/catat_in_app_bar.dart';
+import '../../shared/widgets/dot_pattern_background.dart';
 
 class AccountManagementScreen extends StatefulWidget {
   const AccountManagementScreen({super.key});
 
   @override
-  State<AccountManagementScreen> createState() => _AccountManagementScreenState();
+  State<AccountManagementScreen> createState() =>
+      _AccountManagementScreenState();
 }
 
 class _AccountManagementScreenState extends State<AccountManagementScreen> {
   List<AccountModel> _accounts = [];
   Map<String, double> _balances = {};
   bool _loading = true;
-  final formatter = NumberFormat.currency(locale: 'id_ID', symbol: 'Rp', decimalDigits: 0);
+  final formatter = NumberFormat.currency(
+    locale: 'id_ID',
+    symbol: 'Rp',
+    decimalDigits: 0,
+  );
 
   @override
   void initState() {
@@ -63,9 +70,14 @@ class _AccountManagementScreenState extends State<AccountManagementScreen> {
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('HAPUS AKUN?'),
-        content: Text('Akun "${acc.name}" akan dihapus. Transaksi terkait tidak terhapus.'),
+        content: Text(
+          'Akun "${acc.name}" akan dihapus. Transaksi terkait tidak terhapus.',
+        ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('BATAL')),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('BATAL'),
+          ),
           TextButton(
             onPressed: () async {
               Navigator.pop(ctx);
@@ -73,7 +85,10 @@ class _AccountManagementScreenState extends State<AccountManagementScreen> {
               HapticFeedback.mediumImpact();
               _load();
             },
-            child: const Text('HAPUS', style: TextStyle(color: NeoBrutalColors.danger)),
+            child: const Text(
+              'HAPUS',
+              style: TextStyle(color: NeoBrutalColors.danger),
+            ),
           ),
         ],
       ),
@@ -83,81 +98,105 @@ class _AccountManagementScreenState extends State<AccountManagementScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text(
-          'KELOLA AKUN',
-          style: GoogleFonts.spaceGrotesk(fontSize: 16, fontWeight: FontWeight.w900, letterSpacing: 1.0),
-        ),
-      ),
-      body: _loading
-          ? const Center(child: CircularProgressIndicator())
-          : ListView.builder(
-              padding: const EdgeInsets.all(16),
-              itemCount: _accounts.length,
-              itemBuilder: (context, i) {
-                final acc = _accounts[i];
-                final balance = _balances[acc.id] ?? 0;
-                return Padding(
-                  padding: const EdgeInsets.only(bottom: 8),
-                  child: NeoCard(
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-                    onTap: () => _openForm(edit: acc),
-                    borderOffset: AppConstants.shadowSmall,
-                    child: Row(
-                      children: [
-                        Container(
-                          width: 42,
-                          height: 42,
-                          decoration: BoxDecoration(
-                            color: NeoBrutalColors.secondary.withValues(alpha: 0.15),
-                            border: Border.all(color: NeoBrutalColors.secondary, width: 2),
+      appBar: const CatatInAppBar(subtitle: 'Kelola Akun'),
+      body: DotPatternBackground(
+        child: _loading
+            ? const Center(child: CircularProgressIndicator())
+            : ListView.builder(
+                padding: const EdgeInsets.all(16),
+                itemCount: _accounts.length,
+                itemBuilder: (context, i) {
+                  final acc = _accounts[i];
+                  final balance = _balances[acc.id] ?? 0;
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: NeoCard(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 14,
+                      ),
+                      onTap: () => _openForm(edit: acc),
+                      borderOffset: AppConstants.shadowSmall,
+                      child: Row(
+                        children: [
+                          Container(
+                            width: 42,
+                            height: 42,
+                            decoration: BoxDecoration(
+                              color: NeoBrutalColors.secondary.withValues(
+                                alpha: 0.15,
+                              ),
+                              border: Border.all(
+                                color: NeoBrutalColors.secondary,
+                                width: 2,
+                              ),
+                            ),
+                            child: Icon(
+                              _iconForType(acc.type),
+                              size: 20,
+                              color: NeoBrutalColors.secondary,
+                            ),
                           ),
-                          child: Icon(_iconForType(acc.type), size: 20, color: NeoBrutalColors.secondary),
-                        ),
-                        const SizedBox(width: 14),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
+                          const SizedBox(width: 14),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  acc.name,
+                                  style: GoogleFonts.spaceGrotesk(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                                Text(
+                                  acc.typeLabel,
+                                  style: GoogleFonts.spaceGrotesk(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.end,
                             children: [
                               Text(
-                                acc.name,
-                                style: GoogleFonts.spaceGrotesk(fontSize: 14, fontWeight: FontWeight.w700),
+                                formatter.format(balance),
+                                style: GoogleFonts.spaceGrotesk(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w800,
+                                  color: balance >= 0
+                                      ? NeoBrutalColors.success
+                                      : NeoBrutalColors.danger,
+                                ),
                               ),
                               Text(
-                                acc.typeLabel,
-                                style: GoogleFonts.spaceGrotesk(fontSize: 11, fontWeight: FontWeight.w500),
+                                'Saldo',
+                                style: GoogleFonts.spaceGrotesk(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w500,
+                                ),
                               ),
                             ],
                           ),
-                        ),
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.end,
-                          children: [
-                            Text(
-                              formatter.format(balance),
-                              style: GoogleFonts.spaceGrotesk(
-                                fontSize: 14,
-                                fontWeight: FontWeight.w800,
-                                color: balance >= 0 ? NeoBrutalColors.success : NeoBrutalColors.danger,
-                              ),
+                          const SizedBox(width: 8),
+                          IconButton(
+                            icon: const Icon(
+                              Icons.delete_outline_rounded,
+                              size: 20,
+                              color: NeoBrutalColors.danger,
                             ),
-                            Text(
-                              'Saldo',
-                              style: GoogleFonts.spaceGrotesk(fontSize: 10, fontWeight: FontWeight.w500),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(width: 8),
-                        IconButton(
-                          icon: const Icon(Icons.delete_outline_rounded, size: 20, color: NeoBrutalColors.danger),
-                          onPressed: () => _confirmDelete(acc),
-                        ),
-                      ],
+                            onPressed: () => _confirmDelete(acc),
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
-                );
-              },
-            ),
+                  );
+                },
+              ),
+      ),
       floatingActionButton: FloatingActionButton(
         backgroundColor: NeoBrutalColors.yellow,
         onPressed: () => _openForm(),
@@ -199,7 +238,9 @@ class _AccountFormSheetState extends State<_AccountFormSheet> {
     super.initState();
     if (widget.account != null) {
       _nameController.text = widget.account!.name;
-      _balanceController.text = widget.account!.initialBalance.toStringAsFixed(0);
+      _balanceController.text = widget.account!.initialBalance.toStringAsFixed(
+        0,
+      );
       _type = widget.account!.type;
     }
   }
@@ -214,25 +255,35 @@ class _AccountFormSheetState extends State<_AccountFormSheet> {
   Future<void> _save() async {
     final name = _nameController.text.trim();
     if (name.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Nama tidak boleh kosong')));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Nama tidak boleh kosong')));
       return;
     }
-    final balance = double.tryParse(_balanceController.text.replaceAll('.', '').replaceAll(',', '')) ?? 0;
+    final balance =
+        double.tryParse(
+          _balanceController.text.replaceAll('.', '').replaceAll(',', ''),
+        ) ??
+        0;
 
     final repo = AccountRepo();
     if (widget.account != null) {
-      await repo.update(widget.account!.copyWith(
-        name: name,
-        initialBalance: balance,
-        type: _type,
-      ));
+      await repo.update(
+        widget.account!.copyWith(
+          name: name,
+          initialBalance: balance,
+          type: _type,
+        ),
+      );
     } else {
-      await repo.insert(AccountModel(
-        id: repo.newId(),
-        name: name,
-        initialBalance: balance,
-        type: _type,
-      ));
+      await repo.insert(
+        AccountModel(
+          id: repo.newId(),
+          name: name,
+          initialBalance: balance,
+          type: _type,
+        ),
+      );
     }
 
     HapticFeedback.mediumImpact();
@@ -243,12 +294,23 @@ class _AccountFormSheetState extends State<_AccountFormSheet> {
   Widget build(BuildContext context) {
     final isEdit = widget.account != null;
     return Padding(
-      padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+      padding: EdgeInsets.only(
+        bottom: MediaQuery.of(context).viewInsets.bottom,
+      ),
       child: Container(
         padding: const EdgeInsets.all(24),
         decoration: BoxDecoration(
-          color: Theme.of(context).scaffoldBackgroundColor,
-          border: const Border(top: BorderSide(color: NeoBrutalColors.ink, width: AppConstants.borderPrimary)),
+          color: Theme.of(context).brightness == Brightness.dark
+              ? NeoBrutalColors.bgDark
+              : NeoBrutalColors.bg,
+          border: Border(
+            top: BorderSide(
+              color: Theme.of(context).brightness == Brightness.dark
+                  ? NeoBrutalColors.darkLine
+                  : NeoBrutalColors.ink,
+              width: AppConstants.borderPrimary,
+            ),
+          ),
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -256,10 +318,18 @@ class _AccountFormSheetState extends State<_AccountFormSheet> {
           children: [
             Text(
               isEdit ? 'EDIT AKUN' : 'TAMBAH AKUN',
-              style: GoogleFonts.spaceGrotesk(fontSize: 16, fontWeight: FontWeight.w900, letterSpacing: 1.0),
+              style: GoogleFonts.spaceGrotesk(
+                fontSize: 16,
+                fontWeight: FontWeight.w900,
+                letterSpacing: 1.0,
+              ),
             ),
             const SizedBox(height: 20),
-            NeoTextField(controller: _nameController, label: 'Nama Akun', hint: 'Contoh: BCA'),
+            NeoTextField(
+              controller: _nameController,
+              label: 'Nama Akun',
+              hint: 'Contoh: BCA',
+            ),
             const SizedBox(height: 16),
             NeoTextField(
               controller: _balanceController,
@@ -269,7 +339,15 @@ class _AccountFormSheetState extends State<_AccountFormSheet> {
               prefixIcon: Icons.payments_rounded,
             ),
             const SizedBox(height: 16),
-            Text('TIPE AKUN', style: GoogleFonts.spaceGrotesk(fontSize: 11, fontWeight: FontWeight.w900, letterSpacing: 1.2, color: NeoBrutalColors.ink.withValues(alpha: 0.7))),
+            Text(
+              'TIPE AKUN',
+              style: GoogleFonts.spaceGrotesk(
+                fontSize: 11,
+                fontWeight: FontWeight.w900,
+                letterSpacing: 1.2,
+                color: NeoBrutalColors.ink.withValues(alpha: 0.7),
+              ),
+            ),
             const SizedBox(height: 8),
             Wrap(
               spacing: 8,
@@ -279,16 +357,26 @@ class _AccountFormSheetState extends State<_AccountFormSheet> {
                 return GestureDetector(
                   onTap: () => setState(() => _type = t),
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 8,
+                    ),
                     decoration: BoxDecoration(
-                      color: selected ? NeoBrutalColors.yellow : NeoBrutalColors.surface,
-                      border: Border.all(color: NeoBrutalColors.ink, width: selected ? 3 : 2),
+                      color: selected
+                          ? NeoBrutalColors.yellow
+                          : NeoBrutalColors.surface,
+                      border: Border.all(
+                        color: NeoBrutalColors.ink,
+                        width: selected ? 3 : 2,
+                      ),
                     ),
                     child: Text(
                       _labelForType(t).toUpperCase(),
                       style: GoogleFonts.spaceGrotesk(
                         fontSize: 12,
-                        fontWeight: selected ? FontWeight.w900 : FontWeight.w600,
+                        fontWeight: selected
+                            ? FontWeight.w900
+                            : FontWeight.w600,
                         letterSpacing: 0.5,
                       ),
                     ),

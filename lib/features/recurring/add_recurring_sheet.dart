@@ -14,6 +14,8 @@ import '../../data/notifiers/recurring_list_notifier.dart';
 import '../../data/repositories/recurring_repo.dart';
 import '../../data/repositories/category_repo.dart';
 import '../../data/repositories/account_repo.dart';
+import '../../shared/widgets/neo_dialog.dart';
+import '../../shared/widgets/neo_header_button.dart';
 
 class AddRecurringSheet extends ConsumerStatefulWidget {
   const AddRecurringSheet({super.key, this.editItem});
@@ -21,25 +23,18 @@ class AddRecurringSheet extends ConsumerStatefulWidget {
   final RecurringTransactionModel? editItem;
   bool get isEdit => editItem != null;
 
-  static Future<bool?> show(BuildContext context,
-      {RecurringTransactionModel? editItem}) {
-    return showDialog<bool>(
+  static Future<bool?> show(
+    BuildContext context, {
+    RecurringTransactionModel? editItem,
+  }) {
+    return showNeoDialog<bool>(
       context: context,
-      barrierDismissible: true,
-      barrierColor: Colors.black54,
-      builder: (context) => Dialog(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        insetPadding:
-            const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
-        child: AddRecurringSheet(editItem: editItem),
-      ),
+      child: AddRecurringSheet(editItem: editItem),
     );
   }
 
   @override
-  ConsumerState<AddRecurringSheet> createState() =>
-      _AddRecurringSheetState();
+  ConsumerState<AddRecurringSheet> createState() => _AddRecurringSheetState();
 }
 
 class _AddRecurringSheetState extends ConsumerState<AddRecurringSheet> {
@@ -69,8 +64,9 @@ class _AddRecurringSheetState extends ConsumerState<AddRecurringSheet> {
           ? TransactionType.income
           : TransactionType.expense;
     }
-    final catType =
-        type == TransactionType.income ? CategoryType.income : CategoryType.expense;
+    final catType = type == TransactionType.income
+        ? CategoryType.income
+        : CategoryType.expense;
     final cats = await CategoryRepo().getByType(catType);
     final accs = await AccountRepo().getAll();
 
@@ -86,10 +82,10 @@ class _AddRecurringSheetState extends ConsumerState<AddRecurringSheet> {
         _frequency = rt.frequency;
         _startDate = rt.startDate;
         _autoRecord = rt.autoRecord;
-        _selectedCategory =
-            cats.where((c) => c.id == rt.categoryId).firstOrNull;
-        _selectedAccount =
-            accs.where((a) => a.id == rt.accountId).firstOrNull;
+        _selectedCategory = cats
+            .where((c) => c.id == rt.categoryId)
+            .firstOrNull;
+        _selectedAccount = accs.where((a) => a.id == rt.accountId).firstOrNull;
       } else {
         if (cats.isNotEmpty) _selectedCategory = cats.first;
         if (accs.isNotEmpty) _selectedAccount = accs.first;
@@ -100,8 +96,9 @@ class _AddRecurringSheetState extends ConsumerState<AddRecurringSheet> {
 
   Future<void> _onTypeChanged(TransactionType type) async {
     HapticFeedback.selectionClick();
-    final catType =
-        type == TransactionType.income ? CategoryType.income : CategoryType.expense;
+    final catType = type == TransactionType.income
+        ? CategoryType.income
+        : CategoryType.expense;
     final cats = await CategoryRepo().getByType(catType);
     setState(() {
       _type = type;
@@ -132,9 +129,9 @@ class _AddRecurringSheetState extends ConsumerState<AddRecurringSheet> {
         _selectedCategory == null ||
         _selectedAccount == null) {
       HapticFeedback.heavyImpact();
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Lengkapi semua field')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Lengkapi semua field')));
       return;
     }
 
@@ -144,41 +141,47 @@ class _AddRecurringSheetState extends ConsumerState<AddRecurringSheet> {
     try {
       final notifier = ref.read(recurringListProvider.notifier);
       if (widget.isEdit) {
-        await notifier.updateRecurring(widget.editItem!.copyWith(
-          transactionType:
-              _type == TransactionType.income ? 'income' : 'expense',
-          amount: amount,
-          categoryId: _selectedCategory!.id,
-          accountId: _selectedAccount!.id,
-          note: _noteController.text.isNotEmpty ? _noteController.text : null,
-          frequency: _frequency,
-          startDate: _startDate,
-          autoRecord: _autoRecord,
-        ));
+        await notifier.updateRecurring(
+          widget.editItem!.copyWith(
+            transactionType: _type == TransactionType.income
+                ? 'income'
+                : 'expense',
+            amount: amount,
+            categoryId: _selectedCategory!.id,
+            accountId: _selectedAccount!.id,
+            note: _noteController.text.isNotEmpty ? _noteController.text : null,
+            frequency: _frequency,
+            startDate: _startDate,
+            autoRecord: _autoRecord,
+          ),
+        );
       } else {
         final repo = RecurringRepo();
-        await notifier.addRecurring(RecurringTransactionModel(
-          id: repo.newId(),
-          transactionType:
-              _type == TransactionType.income ? 'income' : 'expense',
-          amount: amount,
-          categoryId: _selectedCategory!.id,
-          accountId: _selectedAccount!.id,
-          note: _noteController.text.isNotEmpty ? _noteController.text : null,
-          frequency: _frequency,
-          startDate: _startDate,
-          nextDate: _startDate,
-          autoRecord: _autoRecord,
-        ));
+        await notifier.addRecurring(
+          RecurringTransactionModel(
+            id: repo.newId(),
+            transactionType: _type == TransactionType.income
+                ? 'income'
+                : 'expense',
+            amount: amount,
+            categoryId: _selectedCategory!.id,
+            accountId: _selectedAccount!.id,
+            note: _noteController.text.isNotEmpty ? _noteController.text : null,
+            frequency: _frequency,
+            startDate: _startDate,
+            nextDate: _startDate,
+            autoRecord: _autoRecord,
+          ),
+        );
       }
 
       if (mounted) Navigator.pop(context, true);
     } catch (e) {
       setState(() => _saving = false);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error: $e')));
       }
     }
   }
@@ -190,8 +193,9 @@ class _AddRecurringSheetState extends ConsumerState<AddRecurringSheet> {
     super.dispose();
   }
 
-  Color get _typeColor =>
-      _type == TransactionType.income ? NeoBrutalColors.success : NeoBrutalColors.orange;
+  Color get _typeColor => _type == TransactionType.income
+      ? NeoBrutalColors.success
+      : NeoBrutalColors.orange;
 
   @override
   Widget build(BuildContext context) {
@@ -274,7 +278,9 @@ class _AddRecurringSheetState extends ConsumerState<AddRecurringSheet> {
       decoration: BoxDecoration(
         border: Border(
           bottom: BorderSide(
-              color: borderColor, width: AppConstants.borderSecondary),
+            color: borderColor,
+            width: AppConstants.borderSecondary,
+          ),
         ),
       ),
       child: Row(
@@ -285,10 +291,15 @@ class _AddRecurringSheetState extends ConsumerState<AddRecurringSheet> {
             decoration: BoxDecoration(
               color: _typeColor,
               border: Border.all(
-                  color: borderColor, width: AppConstants.borderSecondary),
+                color: borderColor,
+                width: AppConstants.borderSecondary,
+              ),
             ),
-            child: const Icon(Icons.repeat_rounded,
-                size: 20, color: Colors.white),
+            child: const Icon(
+              Icons.repeat_rounded,
+              size: 20,
+              color: Colors.white,
+            ),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -301,16 +312,10 @@ class _AddRecurringSheetState extends ConsumerState<AddRecurringSheet> {
               ),
             ),
           ),
-          GestureDetector(
+          NeoHeaderButton(
+            icon: Icons.close_rounded,
+            borderColor: borderColor,
             onTap: () => Navigator.pop(context),
-            child: Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                border: Border.all(
-                    color: borderColor, width: AppConstants.borderSecondary),
-              ),
-              child: const Icon(Icons.close_rounded, size: 18),
-            ),
           ),
         ],
       ),
@@ -324,7 +329,11 @@ class _AddRecurringSheetState extends ConsumerState<AddRecurringSheet> {
         fontSize: 10,
         fontWeight: FontWeight.w900,
         letterSpacing: 2.0,
-        color: NeoBrutalColors.ink.withValues(alpha: 0.5),
+        color:
+            (Theme.of(context).brightness == Brightness.dark
+                    ? NeoBrutalColors.inkDark
+                    : NeoBrutalColors.ink)
+                .withValues(alpha: 0.5),
       ),
     );
   }
@@ -332,13 +341,21 @@ class _AddRecurringSheetState extends ConsumerState<AddRecurringSheet> {
   Widget _buildTypeSelector(Color borderColor) {
     return Row(
       children: [
-        _buildFilterChip('Pengeluaran', _type == TransactionType.expense,
-            () => _onTypeChanged(TransactionType.expense), borderColor,
-            activeColor: NeoBrutalColors.danger),
+        _buildFilterChip(
+          'Pengeluaran',
+          _type == TransactionType.expense,
+          () => _onTypeChanged(TransactionType.expense),
+          borderColor,
+          activeColor: NeoBrutalColors.danger,
+        ),
         const SizedBox(width: 8),
-        _buildFilterChip('Pemasukan', _type == TransactionType.income,
-            () => _onTypeChanged(TransactionType.income), borderColor,
-            activeColor: NeoBrutalColors.success),
+        _buildFilterChip(
+          'Pemasukan',
+          _type == TransactionType.income,
+          () => _onTypeChanged(TransactionType.income),
+          borderColor,
+          activeColor: NeoBrutalColors.success,
+        ),
       ],
     );
   }
@@ -366,7 +383,9 @@ class _AddRecurringSheetState extends ConsumerState<AddRecurringSheet> {
           decoration: BoxDecoration(
             color: NeoBrutalColors.surface,
             border: Border.all(
-                color: NeoBrutalColors.ink, width: AppConstants.borderPrimary),
+              color: NeoBrutalColors.ink,
+              width: AppConstants.borderPrimary,
+            ),
             boxShadow: [
               BoxShadow(
                 color: NeoBrutalColors.ink,
@@ -381,8 +400,7 @@ class _AddRecurringSheetState extends ConsumerState<AddRecurringSheet> {
                 padding: const EdgeInsets.only(right: 12),
                 decoration: const BoxDecoration(
                   border: Border(
-                    right: BorderSide(
-                        color: NeoBrutalColors.muted, width: 2),
+                    right: BorderSide(color: NeoBrutalColors.muted, width: 2),
                   ),
                 ),
                 child: Text(
@@ -443,19 +461,30 @@ class _AddRecurringSheetState extends ConsumerState<AddRecurringSheet> {
             decoration: BoxDecoration(
               color: selected ? cat.colorValue : NeoBrutalColors.surface,
               border: Border.all(
-                  color: borderColor, width: AppConstants.borderSecondary),
+                color: borderColor,
+                width: AppConstants.borderSecondary,
+              ),
               boxShadow: selected
                   ? []
-                  : [BoxShadow(color: borderColor, offset: const Offset(3, 3), blurRadius: 0)],
+                  : [
+                      BoxShadow(
+                        color: borderColor,
+                        offset: const Offset(3, 3),
+                        blurRadius: 0,
+                      ),
+                    ],
             ),
             transform: selected
                 ? (Matrix4.identity()..translateByDouble(1.5, 1.5, 0.0, 1.0))
                 : Matrix4.identity(),
-            child: Text(cat.name.toUpperCase(),
-                style: GoogleFonts.spaceGrotesk(
-                    fontSize: 11,
-                    fontWeight: selected ? FontWeight.w900 : FontWeight.w700,
-                    color: selected ? Colors.white : NeoBrutalColors.ink)),
+            child: Text(
+              cat.name.toUpperCase(),
+              style: GoogleFonts.spaceGrotesk(
+                fontSize: 11,
+                fontWeight: selected ? FontWeight.w900 : FontWeight.w700,
+                color: selected ? Colors.white : NeoBrutalColors.ink,
+              ),
+            ),
           ),
         );
       }).toList(),
@@ -477,21 +506,34 @@ class _AddRecurringSheetState extends ConsumerState<AddRecurringSheet> {
             duration: AppConstants.animButton,
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             decoration: BoxDecoration(
-              color: selected ? NeoBrutalColors.secondary : NeoBrutalColors.surface,
+              color: selected
+                  ? NeoBrutalColors.secondary
+                  : NeoBrutalColors.surface,
               border: Border.all(
-                  color: borderColor, width: AppConstants.borderSecondary),
+                color: borderColor,
+                width: AppConstants.borderSecondary,
+              ),
               boxShadow: selected
                   ? []
-                  : [BoxShadow(color: borderColor, offset: const Offset(3, 3), blurRadius: 0)],
+                  : [
+                      BoxShadow(
+                        color: borderColor,
+                        offset: const Offset(3, 3),
+                        blurRadius: 0,
+                      ),
+                    ],
             ),
             transform: selected
                 ? (Matrix4.identity()..translateByDouble(1.5, 1.5, 0.0, 1.0))
                 : Matrix4.identity(),
-            child: Text(acc.name.toUpperCase(),
-                style: GoogleFonts.spaceGrotesk(
-                    fontSize: 11,
-                    fontWeight: selected ? FontWeight.w900 : FontWeight.w700,
-                    color: selected ? Colors.white : NeoBrutalColors.ink)),
+            child: Text(
+              acc.name.toUpperCase(),
+              style: GoogleFonts.spaceGrotesk(
+                fontSize: 11,
+                fontWeight: selected ? FontWeight.w900 : FontWeight.w700,
+                color: selected ? Colors.white : NeoBrutalColors.ink,
+              ),
+            ),
           ),
         );
       }).toList(),
@@ -520,21 +562,34 @@ class _AddRecurringSheetState extends ConsumerState<AddRecurringSheet> {
             duration: AppConstants.animButton,
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             decoration: BoxDecoration(
-              color: selected ? NeoBrutalColors.yellow : NeoBrutalColors.surface,
+              color: selected
+                  ? NeoBrutalColors.yellow
+                  : NeoBrutalColors.surface,
               border: Border.all(
-                  color: borderColor, width: AppConstants.borderSecondary),
+                color: borderColor,
+                width: AppConstants.borderSecondary,
+              ),
               boxShadow: selected
                   ? []
-                  : [BoxShadow(color: borderColor, offset: const Offset(3, 3), blurRadius: 0)],
+                  : [
+                      BoxShadow(
+                        color: borderColor,
+                        offset: const Offset(3, 3),
+                        blurRadius: 0,
+                      ),
+                    ],
             ),
             transform: selected
                 ? (Matrix4.identity()..translateByDouble(1.5, 1.5, 0.0, 1.0))
                 : Matrix4.identity(),
-            child: Text(item.$2.toUpperCase(),
-                style: GoogleFonts.spaceGrotesk(
-                    fontSize: 11,
-                    fontWeight: selected ? FontWeight.w900 : FontWeight.w700,
-                    color: selected ? NeoBrutalColors.ink : NeoBrutalColors.ink)),
+            child: Text(
+              item.$2.toUpperCase(),
+              style: GoogleFonts.spaceGrotesk(
+                fontSize: 11,
+                fontWeight: selected ? FontWeight.w900 : FontWeight.w700,
+                color: selected ? NeoBrutalColors.ink : NeoBrutalColors.ink,
+              ),
+            ),
           ),
         );
       }).toList(),
@@ -551,12 +606,15 @@ class _AddRecurringSheetState extends ConsumerState<AddRecurringSheet> {
             decoration: BoxDecoration(
               color: NeoBrutalColors.surface,
               border: Border.all(
-                  color: borderColor, width: AppConstants.borderSecondary),
+                color: borderColor,
+                width: AppConstants.borderSecondary,
+              ),
               boxShadow: [
                 BoxShadow(
-                    color: borderColor,
-                    offset: const Offset(3, 3),
-                    blurRadius: 0)
+                  color: borderColor,
+                  offset: const Offset(3, 3),
+                  blurRadius: 0,
+                ),
               ],
             ),
             child: Row(
@@ -564,9 +622,13 @@ class _AddRecurringSheetState extends ConsumerState<AddRecurringSheet> {
               children: [
                 const Icon(Icons.calendar_today_rounded, size: 16),
                 const SizedBox(width: 8),
-                Text(DateFormat('dd MMM yyyy').format(_startDate),
-                    style: GoogleFonts.spaceGrotesk(
-                        fontSize: 12, fontWeight: FontWeight.w700)),
+                Text(
+                  DateFormat('dd MMM yyyy').format(_startDate),
+                  style: GoogleFonts.spaceGrotesk(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
               ],
             ),
           ),
@@ -578,23 +640,30 @@ class _AddRecurringSheetState extends ConsumerState<AddRecurringSheet> {
             decoration: BoxDecoration(
               color: NeoBrutalColors.surface,
               border: Border.all(
-                  color: borderColor, width: AppConstants.borderSecondary),
+                color: borderColor,
+                width: AppConstants.borderSecondary,
+              ),
               boxShadow: [
                 BoxShadow(
-                    color: borderColor,
-                    offset: const Offset(3, 3),
-                    blurRadius: 0)
+                  color: borderColor,
+                  offset: const Offset(3, 3),
+                  blurRadius: 0,
+                ),
               ],
             ),
             child: TextField(
               controller: _noteController,
-              style: GoogleFonts.spaceGrotesk(fontSize: 12, fontWeight: FontWeight.w600),
+              style: GoogleFonts.spaceGrotesk(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+              ),
               decoration: InputDecoration(
                 hintText: 'Catatan...',
                 hintStyle: GoogleFonts.spaceGrotesk(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w500,
-                    color: NeoBrutalColors.muted),
+                  fontSize: 12,
+                  fontWeight: FontWeight.w500,
+                  color: NeoBrutalColors.muted,
+                ),
                 border: InputBorder.none,
                 contentPadding: const EdgeInsets.symmetric(vertical: 12),
                 isDense: true,
@@ -617,7 +686,9 @@ class _AddRecurringSheetState extends ConsumerState<AddRecurringSheet> {
         decoration: BoxDecoration(
           color: NeoBrutalColors.surface,
           border: Border.all(
-              color: borderColor, width: AppConstants.borderSecondary),
+            color: borderColor,
+            width: AppConstants.borderSecondary,
+          ),
         ),
         child: Row(
           children: [
@@ -635,15 +706,21 @@ class _AddRecurringSheetState extends ConsumerState<AddRecurringSheet> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('CATAT OTOMATIS',
-                      style: GoogleFonts.spaceGrotesk(
-                          fontSize: 13, fontWeight: FontWeight.w700)),
+                  Text(
+                    'CATAT OTOMATIS',
+                    style: GoogleFonts.spaceGrotesk(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
                   Text(
                     _autoRecord
                         ? 'Dicatat otomatis saat jatuh tempo'
                         : 'Perlu konfirmasi manual',
                     style: GoogleFonts.spaceGrotesk(
-                        fontSize: 11, fontWeight: FontWeight.w500),
+                      fontSize: 11,
+                      fontWeight: FontWeight.w500,
+                    ),
                   ),
                 ],
               ),
@@ -654,31 +731,49 @@ class _AddRecurringSheetState extends ConsumerState<AddRecurringSheet> {
     );
   }
 
-  Widget _buildFilterChip(String label, bool isActive, VoidCallback onTap,
-      Color borderColor,
-      {Color? activeColor}) {
+  Widget _buildFilterChip(
+    String label,
+    bool isActive,
+    VoidCallback onTap,
+    Color borderColor, {
+    Color? activeColor,
+  }) {
     final color = activeColor ?? NeoBrutalColors.yellow;
+    final inactiveBg = Theme.of(context).brightness == Brightness.dark
+        ? NeoBrutalColors.bgDark
+        : NeoBrutalColors.bg;
     return GestureDetector(
       onTap: onTap,
       child: AnimatedContainer(
         duration: AppConstants.animButton,
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         decoration: BoxDecoration(
-          color: isActive ? color : Colors.transparent,
+          color: isActive ? color : inactiveBg,
           border: Border.all(
-              color: borderColor, width: AppConstants.borderSecondary),
+            color: borderColor,
+            width: AppConstants.borderSecondary,
+          ),
           boxShadow: isActive
               ? []
-              : [BoxShadow(color: borderColor, offset: const Offset(3, 3), blurRadius: 0)],
+              : [
+                  BoxShadow(
+                    color: borderColor,
+                    offset: const Offset(3, 3),
+                    blurRadius: 0,
+                  ),
+                ],
         ),
         transform: isActive
             ? (Matrix4.identity()..translateByDouble(1.5, 1.5, 0.0, 1.0))
             : Matrix4.identity(),
-        child: Text(label.toUpperCase(),
-            style: GoogleFonts.spaceGrotesk(
-                fontSize: 11,
-                fontWeight: isActive ? FontWeight.w900 : FontWeight.w700,
-                color: isActive ? Colors.white : NeoBrutalColors.ink)),
+        child: Text(
+          label.toUpperCase(),
+          style: GoogleFonts.spaceGrotesk(
+            fontSize: 11,
+            fontWeight: isActive ? FontWeight.w900 : FontWeight.w700,
+            color: isActive ? Colors.white : NeoBrutalColors.ink,
+          ),
+        ),
       ),
     );
   }
@@ -693,31 +788,46 @@ class _AddRecurringSheetState extends ConsumerState<AddRecurringSheet> {
         decoration: BoxDecoration(
           color: _saving ? NeoBrutalColors.muted : NeoBrutalColors.success,
           border: Border.all(
-              color: borderColor, width: AppConstants.borderPrimary),
+            color: borderColor,
+            width: AppConstants.borderPrimary,
+          ),
           boxShadow: _saving
               ? []
-              : [BoxShadow(color: borderColor, offset: AppConstants.shadowDefault, blurRadius: 0)],
+              : [
+                  BoxShadow(
+                    color: borderColor,
+                    offset: AppConstants.shadowDefault,
+                    blurRadius: 0,
+                  ),
+                ],
         ),
         transform: _saving
-            ? (Matrix4.identity()
-              ..translateByDouble(AppConstants.shadowDefault.dx / 2,
-                  AppConstants.shadowDefault.dy / 2, 0.0, 1.0))
+            ? (Matrix4.identity()..translateByDouble(
+                AppConstants.shadowDefault.dx / 2,
+                AppConstants.shadowDefault.dy / 2,
+                0.0,
+                1.0,
+              ))
             : Matrix4.identity(),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             if (!_saving) ...[
-              const Icon(Icons.check_circle_outline_rounded,
-                  size: 18, color: Colors.white),
+              const Icon(
+                Icons.check_circle_outline_rounded,
+                size: 18,
+                color: Colors.white,
+              ),
               const SizedBox(width: 8),
             ],
             Text(
               _saving ? 'MENYIMPAN...' : 'SIMPAN',
               style: GoogleFonts.spaceGrotesk(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w900,
-                  letterSpacing: 1.0,
-                  color: Colors.white),
+                fontSize: 13,
+                fontWeight: FontWeight.w900,
+                letterSpacing: 1.0,
+                color: Colors.white,
+              ),
             ),
           ],
         ),

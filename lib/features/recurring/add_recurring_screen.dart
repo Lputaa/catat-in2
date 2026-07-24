@@ -13,6 +13,8 @@ import '../../data/repositories/account_repo.dart';
 import '../../shared/widgets/neo_button.dart';
 import '../../shared/widgets/neo_segmented_control.dart';
 import '../../shared/widgets/neo_text_field.dart';
+import '../../shared/widgets/catat_in_app_bar.dart';
+import '../../shared/widgets/dot_pattern_background.dart';
 
 class AddRecurringScreen extends StatefulWidget {
   const AddRecurringScreen({super.key, this.editTransaction});
@@ -50,7 +52,9 @@ class _AddRecurringScreenState extends State<AddRecurringScreen> {
           ? TransactionType.income
           : TransactionType.expense;
     }
-    final catType = type == TransactionType.income ? CategoryType.income : CategoryType.expense;
+    final catType = type == TransactionType.income
+        ? CategoryType.income
+        : CategoryType.expense;
     final cats = await CategoryRepo().getByType(catType);
     final accs = await AccountRepo().getAll();
 
@@ -66,7 +70,9 @@ class _AddRecurringScreenState extends State<AddRecurringScreen> {
         _frequency = rt.frequency;
         _startDate = rt.startDate;
         _autoRecord = rt.autoRecord;
-        _selectedCategory = cats.where((c) => c.id == rt.categoryId).firstOrNull;
+        _selectedCategory = cats
+            .where((c) => c.id == rt.categoryId)
+            .firstOrNull;
         _selectedAccount = accs.where((a) => a.id == rt.accountId).firstOrNull;
       } else {
         if (cats.isNotEmpty) _selectedCategory = cats.first;
@@ -77,7 +83,9 @@ class _AddRecurringScreenState extends State<AddRecurringScreen> {
   }
 
   Future<void> _onTypeChanged(TransactionType type) async {
-    final catType = type == TransactionType.income ? CategoryType.income : CategoryType.expense;
+    final catType = type == TransactionType.income
+        ? CategoryType.income
+        : CategoryType.expense;
     final cats = await CategoryRepo().getByType(catType);
     setState(() {
       _type = type;
@@ -97,38 +105,53 @@ class _AddRecurringScreenState extends State<AddRecurringScreen> {
   }
 
   Future<void> _save() async {
-    final amount = double.tryParse(_amountController.text.replaceAll('.', '').replaceAll(',', ''));
-    if (amount == null || amount <= 0 || _selectedCategory == null || _selectedAccount == null) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Lengkapi semua field')));
+    final amount = double.tryParse(
+      _amountController.text.replaceAll('.', '').replaceAll(',', ''),
+    );
+    if (amount == null ||
+        amount <= 0 ||
+        _selectedCategory == null ||
+        _selectedAccount == null) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Lengkapi semua field')));
       return;
     }
 
     HapticFeedback.mediumImpact();
     final repo = RecurringRepo();
     if (widget.isEdit) {
-      await repo.update(widget.editTransaction!.copyWith(
-        transactionType: _type == TransactionType.income ? 'income' : 'expense',
-        amount: amount,
-        categoryId: _selectedCategory!.id,
-        accountId: _selectedAccount!.id,
-        note: _noteController.text.isNotEmpty ? _noteController.text : null,
-        frequency: _frequency,
-        startDate: _startDate,
-        autoRecord: _autoRecord,
-      ));
+      await repo.update(
+        widget.editTransaction!.copyWith(
+          transactionType: _type == TransactionType.income
+              ? 'income'
+              : 'expense',
+          amount: amount,
+          categoryId: _selectedCategory!.id,
+          accountId: _selectedAccount!.id,
+          note: _noteController.text.isNotEmpty ? _noteController.text : null,
+          frequency: _frequency,
+          startDate: _startDate,
+          autoRecord: _autoRecord,
+        ),
+      );
     } else {
-      await repo.insert(RecurringTransactionModel(
-        id: repo.newId(),
-        transactionType: _type == TransactionType.income ? 'income' : 'expense',
-        amount: amount,
-        categoryId: _selectedCategory!.id,
-        accountId: _selectedAccount!.id,
-        note: _noteController.text.isNotEmpty ? _noteController.text : null,
-        frequency: _frequency,
-        startDate: _startDate,
-        nextDate: _startDate,
-        autoRecord: _autoRecord,
-      ));
+      await repo.insert(
+        RecurringTransactionModel(
+          id: repo.newId(),
+          transactionType: _type == TransactionType.income
+              ? 'income'
+              : 'expense',
+          amount: amount,
+          categoryId: _selectedCategory!.id,
+          accountId: _selectedAccount!.id,
+          note: _noteController.text.isNotEmpty ? _noteController.text : null,
+          frequency: _frequency,
+          startDate: _startDate,
+          nextDate: _startDate,
+          autoRecord: _autoRecord,
+        ),
+      );
     }
 
     if (mounted) Navigator.pop(context, true);
@@ -143,176 +166,216 @@ class _AddRecurringScreenState extends State<AddRecurringScreen> {
 
   @override
   Widget build(BuildContext context) {
-    if (_loading) return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    if (_loading) {
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text(
-          widget.isEdit ? 'EDIT TRANSAKSI BERULANG' : 'TAMBAH TRANSAKSI BERULANG',
-          style: GoogleFonts.spaceGrotesk(fontSize: 14, fontWeight: FontWeight.w900, letterSpacing: 0.8),
-        ),
+      appBar: CatatInAppBar(
+        subtitle: widget.isEdit
+            ? 'Edit Transaksi Berulang'
+            : 'Tambah Transaksi Berulang',
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            NeoSegmentedControl<TransactionType>(
-              segments: neoSegments([
-                (TransactionType.expense, 'Pengeluaran'),
-                (TransactionType.income, 'Pemasukan'),
-              ]),
-              selected: _type,
-              onChanged: _onTypeChanged,
-            ),
-            const SizedBox(height: 24),
+      body: DotPatternBackground(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              NeoSegmentedControl<TransactionType>(
+                segments: neoSegments([
+                  (TransactionType.expense, 'Pengeluaran'),
+                  (TransactionType.income, 'Pemasukan'),
+                ]),
+                selected: _type,
+                onChanged: _onTypeChanged,
+              ),
+              const SizedBox(height: 24),
 
-            NeoTextField(
-              controller: _amountController,
-              label: 'Jumlah',
-              hint: '0',
-              keyboardType: TextInputType.number,
-              prefixIcon: Icons.payments_rounded,
-            ),
-            const SizedBox(height: 16),
+              NeoTextField(
+                controller: _amountController,
+                label: 'Jumlah',
+                hint: '0',
+                keyboardType: TextInputType.number,
+                prefixIcon: Icons.payments_rounded,
+              ),
+              const SizedBox(height: 16),
 
-            // Category
-            _buildLabel('KATEGORI'),
-            const SizedBox(height: 8),
-            _buildChipWrap(
-              items: _categories.map((c) => (c.id, c.name)).toList(),
-              selectedId: _selectedCategory?.id,
-              onTap: (id) => setState(() => _selectedCategory = _categories.firstWhere((c) => c.id == id)),
-            ),
-            const SizedBox(height: 16),
-
-            // Account
-            _buildLabel('AKUN'),
-            const SizedBox(height: 8),
-            _buildChipWrap(
-              items: _accounts.map((a) => (a.id, a.name)).toList(),
-              selectedId: _selectedAccount?.id,
-              onTap: (id) => setState(() => _selectedAccount = _accounts.firstWhere((a) => a.id == id)),
-            ),
-            const SizedBox(height: 16),
-
-            // Frequency
-            _buildLabel('FREKUENSI'),
-            const SizedBox(height: 8),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: RecurrenceFrequency.values.map((f) {
-                final selected = _frequency == f;
-                String label;
-                switch (f) {
-                  case RecurrenceFrequency.daily:
-                    label = 'Harian';
-                  case RecurrenceFrequency.weekly:
-                    label = 'Mingguan';
-                  case RecurrenceFrequency.monthly:
-                    label = 'Bulanan';
-                  case RecurrenceFrequency.yearly:
-                    label = 'Tahunan';
-                }
-                return GestureDetector(
-                  onTap: () => setState(() => _frequency = f),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                    decoration: BoxDecoration(
-                      color: selected ? NeoBrutalColors.yellow : NeoBrutalColors.surface,
-                      border: Border.all(color: NeoBrutalColors.ink, width: selected ? 3 : 2),
-                      boxShadow: selected
-                          ? [BoxShadow(color: NeoBrutalColors.ink, offset: const Offset(3, 3), blurRadius: 0)]
-                          : null,
-                    ),
-                    child: Text(
-                      label.toUpperCase(),
-                      style: GoogleFonts.spaceGrotesk(
-                        fontSize: 12,
-                        fontWeight: selected ? FontWeight.w900 : FontWeight.w600,
-                        letterSpacing: 0.5,
-                      ),
-                    ),
+              // Category
+              _buildLabel('KATEGORI'),
+              const SizedBox(height: 8),
+              _buildChipWrap(
+                items: _categories.map((c) => (c.id, c.name)).toList(),
+                selectedId: _selectedCategory?.id,
+                onTap: (id) => setState(
+                  () => _selectedCategory = _categories.firstWhere(
+                    (c) => c.id == id,
                   ),
-                );
-              }).toList(),
-            ),
-            const SizedBox(height: 16),
-
-            // Start date
-            GestureDetector(
-              onTap: _pickDate,
-              child: AbsorbPointer(
-                child: NeoTextField(
-                  label: 'Mulai Tanggal',
-                  hint: DateFormat('dd MMM yyyy').format(_startDate),
-                  prefixIcon: Icons.calendar_month_rounded,
-                  readOnly: true,
                 ),
               ),
-            ),
-            const SizedBox(height: 16),
+              const SizedBox(height: 16),
 
-            // Note
-            NeoTextField(
-              controller: _noteController,
-              label: 'Catatan',
-              hint: 'Contoh: Langganan Netflix',
-              prefixIcon: Icons.notes_rounded,
-            ),
-            const SizedBox(height: 16),
-
-            // Auto record toggle
-            GestureDetector(
-              onTap: () => setState(() => _autoRecord = !_autoRecord),
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                decoration: BoxDecoration(
-                  color: NeoBrutalColors.surface,
-                  border: Border.all(color: NeoBrutalColors.ink, width: 2),
+              // Account
+              _buildLabel('AKUN'),
+              const SizedBox(height: 8),
+              _buildChipWrap(
+                items: _accounts.map((a) => (a.id, a.name)).toList(),
+                selectedId: _selectedAccount?.id,
+                onTap: (id) => setState(
+                  () => _selectedAccount = _accounts.firstWhere(
+                    (a) => a.id == id,
+                  ),
                 ),
-                child: Row(
-                  children: [
-                    Icon(
-                      _autoRecord ? Icons.check_box_rounded : Icons.check_box_outline_blank_rounded,
-                      color: _autoRecord ? NeoBrutalColors.success : NeoBrutalColors.muted,
-                      size: 22,
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'CATAT OTOMATIS',
-                            style: GoogleFonts.spaceGrotesk(fontSize: 13, fontWeight: FontWeight.w700),
-                          ),
-                          Text(
-                            _autoRecord
-                                ? 'Transaksi dicatat otomatis saat jatuh tempo'
-                                : 'Perlu konfirmasi manual saat jatuh tempo',
-                            style: GoogleFonts.spaceGrotesk(fontSize: 11, fontWeight: FontWeight.w500),
-                          ),
-                        ],
+              ),
+              const SizedBox(height: 16),
+
+              // Frequency
+              _buildLabel('FREKUENSI'),
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: RecurrenceFrequency.values.map((f) {
+                  final selected = _frequency == f;
+                  String label;
+                  switch (f) {
+                    case RecurrenceFrequency.daily:
+                      label = 'Harian';
+                    case RecurrenceFrequency.weekly:
+                      label = 'Mingguan';
+                    case RecurrenceFrequency.monthly:
+                      label = 'Bulanan';
+                    case RecurrenceFrequency.yearly:
+                      label = 'Tahunan';
+                  }
+                  return GestureDetector(
+                    onTap: () => setState(() => _frequency = f),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 8,
+                      ),
+                      decoration: BoxDecoration(
+                        color: selected
+                            ? NeoBrutalColors.yellow
+                            : NeoBrutalColors.surface,
+                        border: Border.all(
+                          color: NeoBrutalColors.ink,
+                          width: selected ? 3 : 2,
+                        ),
+                        boxShadow: selected
+                            ? [
+                                BoxShadow(
+                                  color: NeoBrutalColors.ink,
+                                  offset: const Offset(3, 3),
+                                  blurRadius: 0,
+                                ),
+                              ]
+                            : null,
+                      ),
+                      child: Text(
+                        label.toUpperCase(),
+                        style: GoogleFonts.spaceGrotesk(
+                          fontSize: 12,
+                          fontWeight: selected
+                              ? FontWeight.w900
+                              : FontWeight.w600,
+                          letterSpacing: 0.5,
+                        ),
                       ),
                     ),
-                  ],
+                  );
+                }).toList(),
+              ),
+              const SizedBox(height: 16),
+
+              // Start date
+              GestureDetector(
+                onTap: _pickDate,
+                child: AbsorbPointer(
+                  child: NeoTextField(
+                    label: 'Mulai Tanggal',
+                    hint: DateFormat('dd MMM yyyy').format(_startDate),
+                    prefixIcon: Icons.calendar_month_rounded,
+                    readOnly: true,
+                  ),
                 ),
               ),
-            ),
-            const SizedBox(height: 32),
+              const SizedBox(height: 16),
 
-            SizedBox(
-              width: double.infinity,
-              child: NeoButton(
-                label: 'SIMPAN',
-                icon: Icons.check_circle_outline_rounded,
-                color: NeoBrutalColors.success,
-                onTap: _save,
+              // Note
+              NeoTextField(
+                controller: _noteController,
+                label: 'Catatan',
+                hint: 'Contoh: Langganan Netflix',
+                prefixIcon: Icons.notes_rounded,
               ),
-            ),
-          ],
+              const SizedBox(height: 16),
+
+              // Auto record toggle
+              GestureDetector(
+                onTap: () => setState(() => _autoRecord = !_autoRecord),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 12,
+                  ),
+                  decoration: BoxDecoration(
+                    color: NeoBrutalColors.surface,
+                    border: Border.all(color: NeoBrutalColors.ink, width: 2),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(
+                        _autoRecord
+                            ? Icons.check_box_rounded
+                            : Icons.check_box_outline_blank_rounded,
+                        color: _autoRecord
+                            ? NeoBrutalColors.success
+                            : NeoBrutalColors.muted,
+                        size: 22,
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'CATAT OTOMATIS',
+                              style: GoogleFonts.spaceGrotesk(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                            Text(
+                              _autoRecord
+                                  ? 'Transaksi dicatat otomatis saat jatuh tempo'
+                                  : 'Perlu konfirmasi manual saat jatuh tempo',
+                              style: GoogleFonts.spaceGrotesk(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 32),
+
+              SizedBox(
+                width: double.infinity,
+                child: NeoButton(
+                  label: 'SIMPAN',
+                  icon: Icons.check_circle_outline_rounded,
+                  color: NeoBrutalColors.success,
+                  onTap: _save,
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -345,10 +408,21 @@ class _AddRecurringScreenState extends State<AddRecurringScreen> {
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             decoration: BoxDecoration(
-              color: selected ? NeoBrutalColors.yellow : NeoBrutalColors.surface,
-              border: Border.all(color: NeoBrutalColors.ink, width: selected ? 3 : 2),
+              color: selected
+                  ? NeoBrutalColors.yellow
+                  : NeoBrutalColors.surface,
+              border: Border.all(
+                color: NeoBrutalColors.ink,
+                width: selected ? 3 : 2,
+              ),
               boxShadow: selected
-                  ? [BoxShadow(color: NeoBrutalColors.ink, offset: const Offset(3, 3), blurRadius: 0)]
+                  ? [
+                      BoxShadow(
+                        color: NeoBrutalColors.ink,
+                        offset: const Offset(3, 3),
+                        blurRadius: 0,
+                      ),
+                    ]
                   : null,
             ),
             child: Text(

@@ -35,52 +35,47 @@ class NeoBottomNavigation extends ConsumerWidget {
       padding: EdgeInsets.only(bottom: bottomPadding),
       decoration: BoxDecoration(
         color: bg,
-        border: Border(top: BorderSide(color: borderColor, width: AppConstants.borderPrimary)),
+        border: Border(
+          top: BorderSide(
+            color: borderColor,
+            width: AppConstants.borderPrimary,
+          ),
+        ),
       ),
       child: Row(
         children: [
-          for (int i = 0; i < 2; i++) _buildTab(context, ref, i, currentIndex),
-          // Center FAB
+          for (int i = 0; i < 2; i++)
+            _buildTab(context, ref, i, currentIndex, borderColor),
+          // Center FAB (docked, 3D press)
           Expanded(
             child: Center(
-              child: GestureDetector(
-                onTap: () {
-                  HapticFeedback.mediumImpact();
-                  AddTransactionSheet.show(context);
-                },
-                child: Container(
-                  width: 56,
-                  height: 56,
-                  transform: Matrix4.identity()..translateByDouble(0.0, -12.0, 0.0, 1.0),
-                  decoration: BoxDecoration(
-                    color: NeoBrutalColors.yellow,
-                    border: Border.all(color: borderColor, width: AppConstants.borderPrimary),
-                    boxShadow: NeoBrutalTheme.hardShadow(
-                      offset: AppConstants.shadowSmall,
-                      brightness: brightness,
-                    ),
-                  ),
-                  child: const Center(
-                    child: Icon(Icons.add_rounded, size: 28, color: NeoBrutalColors.ink),
-                  ),
-                ),
+              child: _NavCenterButton(
+                borderColor: borderColor,
+                brightness: brightness,
               ),
             ),
           ),
-          for (int i = 2; i < 4; i++) _buildTab(context, ref, i, currentIndex),
+          for (int i = 2; i < 4; i++)
+            _buildTab(context, ref, i, currentIndex, borderColor),
         ],
       ),
     );
   }
 
-  Widget _buildTab(BuildContext context, WidgetRef ref, int index, int current) {
+  Widget _buildTab(
+    BuildContext context,
+    WidgetRef ref,
+    int index,
+    int current,
+    Color borderColor,
+  ) {
     final tab = _tabs[index];
     final selected = index == current;
-    final brightness = Theme.of(context).brightness;
 
     return Expanded(
       child: GestureDetector(
         onTap: () {
+          if (selected) return;
           HapticFeedback.lightImpact();
           ref.read(navIndexProvider.notifier).state = index;
         },
@@ -88,24 +83,35 @@ class NeoBottomNavigation extends ConsumerWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
+            // Active indicator: solid Neo-Brutal block (opaque fill keeps the
+            // hard shadow crisp under Impeller). Border width is kept for both
+            // states so switching tabs never shifts the layout.
             AnimatedContainer(
               duration: AppConstants.animSegmented,
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              curve: Curves.easeOut,
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 5),
               decoration: BoxDecoration(
-                color: selected
-                    ? (brightness == Brightness.light
-                        ? tab.color.withValues(alpha: 0.15)
-                        : tab.color.withValues(alpha: 0.25))
-                    : Colors.transparent,
+                color: selected ? tab.color : Colors.transparent,
+                border: Border.all(
+                  color: selected ? borderColor : Colors.transparent,
+                  width: AppConstants.borderSecondary,
+                ),
                 borderRadius: BorderRadius.circular(AppConstants.radiusChip),
+                boxShadow: [
+                  BoxShadow(
+                    color: selected ? borderColor : Colors.transparent,
+                    offset: const Offset(2, 2),
+                    blurRadius: 0,
+                  ),
+                ],
               ),
               child: Icon(
                 tab.icon,
                 size: 22,
-                color: selected ? tab.color : NeoBrutalColors.muted,
+                color: selected ? Colors.white : NeoBrutalColors.muted,
               ),
             ),
-            const SizedBox(height: 2),
+            const SizedBox(height: 3),
             Text(
               tab.label.toUpperCase(),
               style: TextStyle(
@@ -117,6 +123,64 @@ class NeoBottomNavigation extends ConsumerWidget {
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Center-docked "add transaction" button with the shared Neo-Brutal 3D press
+/// effect: the hard shadow collapses and the block translates into it on press.
+class _NavCenterButton extends StatefulWidget {
+  const _NavCenterButton({required this.borderColor, required this.brightness});
+
+  final Color borderColor;
+  final Brightness brightness;
+
+  @override
+  State<_NavCenterButton> createState() => _NavCenterButtonState();
+}
+
+class _NavCenterButtonState extends State<_NavCenterButton> {
+  bool _pressed = false;
+
+  @override
+  Widget build(BuildContext context) {
+    // Base docking offset lifts the button above the bar; the press nudges it
+    // toward the shadow (down-right) while the shadow disappears.
+    const dock = -12.0;
+    final press = AppConstants.shadowSmall;
+    return GestureDetector(
+      onTapDown: (_) => setState(() => _pressed = true),
+      onTapCancel: () => setState(() => _pressed = false),
+      onTapUp: (_) {
+        setState(() => _pressed = false);
+        HapticFeedback.mediumImpact();
+        AddTransactionSheet.show(context);
+      },
+      child: AnimatedContainer(
+        duration: AppConstants.animButton,
+        width: 56,
+        height: 56,
+        transform: _pressed
+            ? (Matrix4.identity()
+                ..translateByDouble(press.dx, dock + press.dy, 0.0, 1.0))
+            : (Matrix4.identity()..translateByDouble(0.0, dock, 0.0, 1.0)),
+        decoration: BoxDecoration(
+          color: NeoBrutalColors.yellow,
+          border: Border.all(
+            color: widget.borderColor,
+            width: AppConstants.borderPrimary,
+          ),
+          boxShadow: _pressed
+              ? const []
+              : NeoBrutalTheme.hardShadow(
+                  offset: press,
+                  brightness: widget.brightness,
+                ),
+        ),
+        child: const Center(
+          child: Icon(Icons.add_rounded, size: 28, color: NeoBrutalColors.ink),
         ),
       ),
     );

@@ -23,7 +23,11 @@ final accountBalancesProvider = Provider<Map<String, double>>((ref) {
   for (final acc in accounts) {
     double balance = acc.initialBalance;
     for (final tx in transactions) {
-      if (tx.accountId == acc.id) {
+      if (tx.type == TransactionType.transfer) {
+        // Transfer moves money out of source and into destination.
+        if (tx.accountId == acc.id) balance -= tx.amount;
+        if (tx.toAccountId == acc.id) balance += tx.amount;
+      } else if (tx.accountId == acc.id) {
         if (tx.type == TransactionType.income) {
           balance += tx.amount;
         } else {
@@ -76,9 +80,10 @@ final monthSummaryProvider = Provider<Map<String, double>>((ref) {
         tx.date.isBefore(end)) {
       if (tx.type == TransactionType.income) {
         income += tx.amount;
-      } else {
+      } else if (tx.type == TransactionType.expense) {
         expense += tx.amount;
       }
+      // Transfers are neutral — excluded from income/expense totals.
     }
   }
 
@@ -94,7 +99,9 @@ final budgetOverviewProvider = Provider<List<BudgetWithDetails>>((ref) {
 });
 
 // ── Upcoming Recurring (Provider - watches RecurringListNotifier) ──
-final upcomingRecurringProvider = Provider<List<RecurringTransactionModel>>((ref) {
+final upcomingRecurringProvider = Provider<List<RecurringTransactionModel>>((
+  ref,
+) {
   return ref.watch(recurringListProvider).upcoming;
 });
 
