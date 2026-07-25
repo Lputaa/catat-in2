@@ -3,6 +3,7 @@ import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
 import 'repositories/transaction_repo.dart';
 import 'repositories/category_repo.dart';
+import 'settings_service.dart';
 
 class AiService {
   AiService._();
@@ -12,7 +13,17 @@ class AiService {
   static const _model = 'claude-haiku-4-5-20251001';
 
   static String? get apiKey => _apiKey;
-  static void setApiKey(String? key) => _apiKey = key;
+
+  /// Load persisted API key from Hive. Call once on app start.
+  static Future<void> init() async {
+    _apiKey = SettingsService.instance.apiKey;
+  }
+
+  /// Set API key and persist to Hive.
+  static Future<void> setApiKey(String? key) async {
+    _apiKey = key;
+    await SettingsService.instance.setApiKey(key);
+  }
 
   /// Generate monthly financial insight
   static Future<String> generateMonthlyInsight({

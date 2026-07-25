@@ -64,4 +64,14 @@ class AccountRepo {
   }
 
   String newId() => 'acc_${_uuid.v4()}';
+
+  /// Count transactions linked to this account.
+  Future<int> countTransactions(String accountId) async {
+    final db = await _db.database;
+    final result = await db.rawQuery(
+      'SELECT COUNT(*) as cnt FROM transactions WHERE account_id = ?',
+      [accountId],
+    );
+    return (result.first['cnt'] as int?) ?? 0;
+  }
 }

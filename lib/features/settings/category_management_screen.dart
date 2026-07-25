@@ -42,6 +42,7 @@ class _CategoryManagementScreenState extends State<CategoryManagementScreen> {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
+      barrierColor: NeoBrutalColors.ink.withValues(alpha: 0.5),
       builder: (_) => _CategoryFormSheet(
         category: edit,
         onSaved: () {
@@ -52,14 +53,38 @@ class _CategoryManagementScreenState extends State<CategoryManagementScreen> {
     );
   }
 
-  void _confirmDelete(CategoryModel cat) {
+  Future<void> _confirmDelete(CategoryModel cat) async {
+    final repo = CategoryRepo();
+    final count = await repo.countTransactions(cat.id);
+
+    if (!mounted) return;
+
+    if (count > 0) {
+      // Category is in use — block deletion
+      showDialog(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: const Text('TIDAK BISA DIHAPUS'),
+          content: Text(
+            'Kategori "${cat.name}" masih dipakai di $count transaksi.\n\n'
+            'Hapus atau pindahkan transaksi terkait terlebih dahulu.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('OK'),
+            ),
+          ],
+        ),
+      );
+      return;
+    }
+
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('HAPUS KATEGORI?'),
-        content: Text(
-          'Kategori "${cat.name}" akan dihapus. Transaksi terkait tidak terhapus.',
-        ),
+        content: Text('Kategori "${cat.name}" akan dihapus permanen.'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
@@ -68,7 +93,7 @@ class _CategoryManagementScreenState extends State<CategoryManagementScreen> {
           TextButton(
             onPressed: () async {
               Navigator.pop(ctx);
-              await CategoryRepo().delete(cat.id);
+              await repo.delete(cat.id);
               HapticFeedback.mediumImpact();
               _load();
             },
@@ -84,7 +109,13 @@ class _CategoryManagementScreenState extends State<CategoryManagementScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final brightness = Theme.of(context).brightness;
+    final bgColor = brightness == Brightness.dark
+        ? NeoBrutalColors.bgDark
+        : NeoBrutalColors.bg;
+
     return Scaffold(
+      backgroundColor: bgColor,
       appBar: const CatatInAppBar(subtitle: 'Kelola Kategori'),
       body: DotPatternBackground(
         child: _loading
@@ -145,7 +176,10 @@ class _CategoryManagementScreenState extends State<CategoryManagementScreen> {
                     width: 36,
                     height: 36,
                     decoration: BoxDecoration(
-                      color: cat.colorValue.withValues(alpha: 0.15),
+                      color: Color.alphaBlend(
+                        cat.colorValue.withValues(alpha: 0.15),
+                        NeoBrutalColors.surface,
+                      ),
                       border: Border.all(color: cat.colorValue, width: 2),
                     ),
                     child: Icon(
@@ -234,8 +268,32 @@ class _CategoryFormSheetState extends State<_CategoryFormSheet> {
       ).showSnackBar(const SnackBar(content: Text('Nama tidak boleh kosong')));
       return;
     }
+    if (name.length > 30) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Nama maksimal 30 karakter')),
+      );
+      return;
+    }
 
     final repo = CategoryRepo();
+
+    // Check duplicate name (case-insensitive, same type)
+    final all = await repo.getAll();
+    final duplicate = all.any(
+      (c) =>
+          c.name.toLowerCase() == name.toLowerCase() &&
+          c.type == _type &&
+          c.id != widget.category?.id,
+    );
+    if (duplicate) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Kategori dengan nama ini sudah ada')),
+        );
+      }
+      return;
+    }
+
     if (widget.category != null) {
       await repo.update(
         CategoryModel(
@@ -265,21 +323,27 @@ class _CategoryFormSheetState extends State<_CategoryFormSheet> {
   @override
   Widget build(BuildContext context) {
     final isEdit = widget.category != null;
+    final brightness = Theme.of(context).brightness;
+    final borderColor = brightness == Brightness.dark
+        ? NeoBrutalColors.darkLine
+        : NeoBrutalColors.ink;
+    final labelColor = brightness == Brightness.dark
+        ? NeoBrutalColors.inkDark.withValues(alpha: 0.7)
+        : NeoBrutalColors.ink.withValues(alpha: 0.7);
+
     return Padding(
       padding: EdgeInsets.only(
         bottom: MediaQuery.of(context).viewInsets.bottom,
       ),
       child: Container(
-        padding: const EdgeInsets.all(24),
+        padding: const EdgeInsets.fromLTRB(24, 24, 24, 32),
         decoration: BoxDecoration(
-          color: Theme.of(context).brightness == Brightness.dark
+          color: brightness == Brightness.dark
               ? NeoBrutalColors.bgDark
               : NeoBrutalColors.bg,
           border: Border(
             top: BorderSide(
-              color: Theme.of(context).brightness == Brightness.dark
-                  ? NeoBrutalColors.darkLine
-                  : NeoBrutalColors.ink,
+              color: borderColor,
               width: AppConstants.borderPrimary,
             ),
           ),
@@ -309,7 +373,7 @@ class _CategoryFormSheetState extends State<_CategoryFormSheet> {
                 fontSize: 11,
                 fontWeight: FontWeight.w900,
                 letterSpacing: 1.2,
-                color: NeoBrutalColors.ink.withValues(alpha: 0.7),
+                color: labelColor,
               ),
             ),
             const SizedBox(height: 8),
@@ -335,7 +399,7 @@ class _CategoryFormSheetState extends State<_CategoryFormSheet> {
                 fontSize: 11,
                 fontWeight: FontWeight.w900,
                 letterSpacing: 1.2,
-                color: NeoBrutalColors.ink.withValues(alpha: 0.7),
+                color: labelColor,
               ),
             ),
             const SizedBox(height: 8),
@@ -344,23 +408,31 @@ class _CategoryFormSheetState extends State<_CategoryFormSheet> {
               runSpacing: 8,
               children: _presetColors.map((c) {
                 final selected = _color == c;
+                final isLightColor =
+                    ThemeData.estimateBrightnessForColor(Color(c)) ==
+                    Brightness.light;
+                final borderColor =
+                    Theme.of(context).brightness == Brightness.dark
+                    ? NeoBrutalColors.darkLine
+                    : NeoBrutalColors.ink;
                 return GestureDetector(
                   onTap: () => setState(() => _color = c),
-                  child: Container(
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 150),
                     width: 36,
                     height: 36,
                     decoration: BoxDecoration(
                       color: Color(c),
                       border: Border.all(
                         color: selected
-                            ? NeoBrutalColors.ink
-                            : Colors.transparent,
+                            ? borderColor
+                            : borderColor.withValues(alpha: 0.25),
                         width: selected ? 3 : 1.5,
                       ),
                       boxShadow: selected
                           ? [
                               BoxShadow(
-                                color: NeoBrutalColors.ink,
+                                color: borderColor,
                                 offset: const Offset(2, 2),
                                 blurRadius: 0,
                               ),
@@ -368,10 +440,12 @@ class _CategoryFormSheetState extends State<_CategoryFormSheet> {
                           : null,
                     ),
                     child: selected
-                        ? const Icon(
+                        ? Icon(
                             Icons.check_rounded,
                             size: 18,
-                            color: Colors.white,
+                            color: isLightColor
+                                ? NeoBrutalColors.ink
+                                : Colors.white,
                           )
                         : null,
                   ),
@@ -407,16 +481,25 @@ class _TypeChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final brightness = Theme.of(context).brightness;
+    final borderColor = brightness == Brightness.dark
+        ? NeoBrutalColors.darkLine
+        : NeoBrutalColors.ink;
+    final inactiveBg = brightness == Brightness.dark
+        ? NeoBrutalColors.surfaceDark
+        : NeoBrutalColors.surface;
+    final textColor = brightness == Brightness.dark
+        ? NeoBrutalColors.inkDark
+        : NeoBrutalColors.ink;
+
     return GestureDetector(
       onTap: onTap,
-      child: Container(
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 150),
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         decoration: BoxDecoration(
-          color: selected ? NeoBrutalColors.yellow : NeoBrutalColors.surface,
-          border: Border.all(
-            color: NeoBrutalColors.ink,
-            width: selected ? 3 : 2,
-          ),
+          color: selected ? NeoBrutalColors.yellow : inactiveBg,
+          border: Border.all(color: borderColor, width: selected ? 3 : 2),
         ),
         child: Text(
           label.toUpperCase(),
@@ -424,6 +507,7 @@ class _TypeChip extends StatelessWidget {
             fontSize: 12,
             fontWeight: selected ? FontWeight.w900 : FontWeight.w600,
             letterSpacing: 0.5,
+            color: selected ? NeoBrutalColors.ink : textColor,
           ),
         ),
       ),

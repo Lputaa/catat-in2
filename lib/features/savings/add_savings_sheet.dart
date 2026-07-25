@@ -80,10 +80,23 @@ class _AddSavingsSheetState extends ConsumerState<AddSavingsSheet> {
     final amount = double.tryParse(
       _amountController.text.replaceAll('.', '').replaceAll(',', ''),
     );
-    if (name.isEmpty || amount == null || amount <= 0) {
+    if (name.isEmpty) {
       HapticFeedback.heavyImpact();
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Lengkapi nama dan target jumlah')),
+        const SnackBar(content: Text('Nama target tidak boleh kosong')),
+      );
+      return;
+    }
+    if (name.length > 50) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Nama maksimal 50 karakter')),
+      );
+      return;
+    }
+    if (amount == null || amount <= 0) {
+      HapticFeedback.heavyImpact();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Target jumlah harus lebih dari 0')),
       );
       return;
     }

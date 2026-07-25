@@ -65,13 +65,44 @@ class _AccountManagementScreenState extends State<AccountManagementScreen> {
     );
   }
 
-  void _confirmDelete(AccountModel acc) {
+  Future<void> _confirmDelete(AccountModel acc) async {
+    final repo = AccountRepo();
+    final count = await repo.countTransactions(acc.id);
+    final balance = _balances[acc.id] ?? 0;
+
+    if (!mounted) return;
+
+    if (count > 0 || balance != 0) {
+      // Account has transactions or non-zero balance — block deletion
+      final reason = <String>[];
+      if (count > 0) reason.add('$count transaksi terkait');
+      if (balance != 0) reason.add('saldo ${formatter.format(balance)}');
+
+      showDialog(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: const Text('TIDAK BISA DIHAPUS'),
+          content: Text(
+            'Akun "${acc.name}" masih memiliki ${reason.join(" dan ")}.\n\n'
+            'Hapus atau pindahkan transaksi terkait, dan pastikan saldo 0.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('OK'),
+            ),
+          ],
+        ),
+      );
+      return;
+    }
+
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('HAPUS AKUN?'),
         content: Text(
-          'Akun "${acc.name}" akan dihapus. Transaksi terkait tidak terhapus.',
+          'Akun "${acc.name}" akan dihapus permanen.',
         ),
         actions: [
           TextButton(
@@ -81,7 +112,7 @@ class _AccountManagementScreenState extends State<AccountManagementScreen> {
           TextButton(
             onPressed: () async {
               Navigator.pop(ctx);
-              await AccountRepo().delete(acc.id);
+              await repo.delete(acc.id);
               HapticFeedback.mediumImpact();
               _load();
             },
@@ -97,7 +128,13 @@ class _AccountManagementScreenState extends State<AccountManagementScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final brightness = Theme.of(context).brightness;
+    final bgColor = brightness == Brightness.dark
+        ? NeoBrutalColors.bgDark
+        : NeoBrutalColors.bg;
+
     return Scaffold(
+      backgroundColor: bgColor,
       appBar: const CatatInAppBar(subtitle: 'Kelola Akun'),
       body: DotPatternBackground(
         child: _loading
@@ -260,13 +297,35 @@ class _AccountFormSheetState extends State<_AccountFormSheet> {
       ).showSnackBar(const SnackBar(content: Text('Nama tidak boleh kosong')));
       return;
     }
+    if (name.length > 30) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Nama maksimal 30 karakter')),
+      );
+      return;
+    }
+
+    final repo = AccountRepo();
+
+    // Check duplicate name (case-insensitive)
+    final all = await repo.getAll();
+    final duplicate = all.any((a) =>
+        a.name.toLowerCase() == name.toLowerCase() &&
+        a.id != widget.account?.id);
+    if (duplicate) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Akun dengan nama ini sudah ada')),
+        );
+      }
+      return;
+    }
+
     final balance =
         double.tryParse(
           _balanceController.text.replaceAll('.', '').replaceAll(',', ''),
         ) ??
         0;
 
-    final repo = AccountRepo();
     if (widget.account != null) {
       await repo.update(
         widget.account!.copyWith(

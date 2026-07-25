@@ -653,6 +653,7 @@ class _AddRecurringSheetState extends ConsumerState<AddRecurringSheet> {
             ),
             child: TextField(
               controller: _noteController,
+              maxLength: 500,
               style: GoogleFonts.spaceGrotesk(
                 fontSize: 12,
                 fontWeight: FontWeight.w600,
@@ -667,6 +668,7 @@ class _AddRecurringSheetState extends ConsumerState<AddRecurringSheet> {
                 border: InputBorder.none,
                 contentPadding: const EdgeInsets.symmetric(vertical: 12),
                 isDense: true,
+                counterText: '',
               ),
             ),
           ),

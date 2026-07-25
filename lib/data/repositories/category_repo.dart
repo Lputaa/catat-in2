@@ -46,4 +46,14 @@ class CategoryRepo {
   }
 
   String newId() => 'cat_${_uuid.v4()}';
+
+  /// Count transactions using this category.
+  Future<int> countTransactions(String categoryId) async {
+    final db = await _db.database;
+    final result = await db.rawQuery(
+      'SELECT COUNT(*) as cnt FROM transactions WHERE category_id = ?',
+      [categoryId],
+    );
+    return (result.first['cnt'] as int?) ?? 0;
+  }
 }

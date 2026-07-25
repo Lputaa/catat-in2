@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import '../../core/theme/neo_brutal_colors.dart';
 import '../../data/ai_service.dart';
 import '../../shared/widgets/catat_in_app_bar.dart';
+import '../../shared/widgets/dot_pattern_background.dart';
 import '../../shared/widgets/neo_card.dart';
 import '../../shared/widgets/neo_button.dart';
 import '../../shared/widgets/neo_text_field.dart';
@@ -61,14 +62,30 @@ class _InsightScreenState extends ConsumerState<InsightScreen> {
     }
   }
 
-  void _saveApiKey() {
+  Future<void> _saveApiKey() async {
     final key = _apiKeyController.text.trim();
     if (key.isEmpty) return;
-    AiService.setApiKey(key);
+    await AiService.setApiKey(key);
     setState(() => _showApiKeyInput = false);
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('API Key tersimpan')),
-    );
+    if (mounted) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('API Key tersimpan')));
+    }
+  }
+
+  Future<void> _clearApiKey() async {
+    await AiService.setApiKey(null);
+    _apiKeyController.clear();
+    setState(() {
+      _showApiKeyInput = true;
+      _insight = null;
+    });
+    if (mounted) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('API Key dihapus')));
+    }
   }
 
   @override
@@ -82,23 +99,34 @@ class _InsightScreenState extends ConsumerState<InsightScreen> {
     final now = DateFormat('MMMM yyyy', 'id_ID').format(DateTime.now());
 
     return Scaffold(
+      backgroundColor: Theme.of(context).brightness == Brightness.dark
+          ? NeoBrutalColors.bgDark
+          : NeoBrutalColors.bg,
       appBar: const CatatInAppBar(subtitle: 'Insight AI'),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
+      body: DotPatternBackground(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(16),
+          child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // API Key input
             if (_showApiKeyInput) ...[
               NeoCard(
-                color: NeoBrutalColors.yellow.withValues(alpha: 0.2),
+                color: Color.alphaBlend(
+                  NeoBrutalColors.yellow.withValues(alpha: 0.2),
+                  NeoBrutalColors.bg,
+                ),
                 padding: const EdgeInsets.all(16),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Row(
                       children: [
-                        const Icon(Icons.key_rounded, size: 20, color: NeoBrutalColors.orange),
+                        const Icon(
+                          Icons.key_rounded,
+                          size: 20,
+                          color: NeoBrutalColors.orange,
+                        ),
                         const SizedBox(width: 8),
                         Text(
                           'API KEY DIPERLUKAN',
@@ -113,7 +141,10 @@ class _InsightScreenState extends ConsumerState<InsightScreen> {
                     const SizedBox(height: 4),
                     Text(
                       'Masukkan Anthropic API Key untuk menggunakan fitur ini.',
-                      style: GoogleFonts.spaceGrotesk(fontSize: 12, fontWeight: FontWeight.w500),
+                      style: GoogleFonts.spaceGrotesk(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                      ),
                     ),
                     const SizedBox(height: 12),
                     NeoTextField(
@@ -139,6 +170,52 @@ class _InsightScreenState extends ConsumerState<InsightScreen> {
             ],
 
             // Generate button
+            if (AiService.apiKey != null && !_showApiKeyInput) ...[
+              Align(
+                alignment: Alignment.centerRight,
+                child: GestureDetector(
+                  onTap: _clearApiKey,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      vertical: 6,
+                      horizontal: 10,
+                    ),
+                    decoration: BoxDecoration(
+                      border: Border.all(
+                        color: NeoBrutalColors.muted,
+                        width: 1.5,
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.key_off_rounded,
+                          size: 14,
+                          color: Theme.of(context).brightness == Brightness.dark
+                              ? NeoBrutalColors.inkDark.withValues(alpha: 0.6)
+                              : NeoBrutalColors.muted,
+                        ),
+                        const SizedBox(width: 6),
+                        Text(
+                          'HAPUS API KEY',
+                          style: GoogleFonts.spaceGrotesk(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: 0.8,
+                            color:
+                                Theme.of(context).brightness == Brightness.dark
+                                ? NeoBrutalColors.inkDark.withValues(alpha: 0.6)
+                                : NeoBrutalColors.muted,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+            ],
             NeoCard(
               color: NeoBrutalColors.purple,
               padding: const EdgeInsets.all(20),
@@ -147,7 +224,11 @@ class _InsightScreenState extends ConsumerState<InsightScreen> {
                 children: [
                   Row(
                     children: [
-                      const Icon(Icons.auto_awesome_rounded, size: 24, color: Colors.white),
+                      const Icon(
+                        Icons.auto_awesome_rounded,
+                        size: 24,
+                        color: Colors.white,
+                      ),
                       const SizedBox(width: 10),
                       Expanded(
                         child: Text(
@@ -196,7 +277,10 @@ class _InsightScreenState extends ConsumerState<InsightScreen> {
                     const SizedBox(height: 16),
                     Text(
                       'Claude sedang menganalisis keuanganmu...',
-                      style: GoogleFonts.spaceGrotesk(fontSize: 13, fontWeight: FontWeight.w600),
+                      style: GoogleFonts.spaceGrotesk(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                   ],
                 ),
@@ -205,16 +289,27 @@ class _InsightScreenState extends ConsumerState<InsightScreen> {
             // Error
             if (_error != null)
               NeoCard(
-                color: NeoBrutalColors.danger.withValues(alpha: 0.1),
+                color: Color.alphaBlend(
+                  NeoBrutalColors.danger.withValues(alpha: 0.1),
+                  NeoBrutalColors.bg,
+                ),
                 padding: const EdgeInsets.all(16),
                 child: Row(
                   children: [
-                    const Icon(Icons.error_outline_rounded, color: NeoBrutalColors.danger, size: 24),
+                    const Icon(
+                      Icons.error_outline_rounded,
+                      color: NeoBrutalColors.danger,
+                      size: 24,
+                    ),
                     const SizedBox(width: 12),
                     Expanded(
                       child: Text(
                         _error!,
-                        style: GoogleFonts.spaceGrotesk(fontSize: 13, fontWeight: FontWeight.w600, color: NeoBrutalColors.danger),
+                        style: GoogleFonts.spaceGrotesk(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: NeoBrutalColors.danger,
+                        ),
                       ),
                     ),
                   ],
@@ -225,7 +320,11 @@ class _InsightScreenState extends ConsumerState<InsightScreen> {
             if (_insight != null) ...[
               Text(
                 'HASIL INSIGHT',
-                style: GoogleFonts.spaceGrotesk(fontSize: 12, fontWeight: FontWeight.w900, letterSpacing: 1.5),
+                style: GoogleFonts.spaceGrotesk(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: 1.5,
+                ),
               ),
               const SizedBox(height: 12),
               NeoCard(
@@ -239,10 +338,19 @@ class _InsightScreenState extends ConsumerState<InsightScreen> {
                           width: 32,
                           height: 32,
                           decoration: BoxDecoration(
-                            color: NeoBrutalColors.purple.withValues(alpha: 0.15),
-                            border: Border.all(color: NeoBrutalColors.purple, width: 2),
+                            color: NeoBrutalColors.purple.withValues(
+                              alpha: 0.15,
+                            ),
+                            border: Border.all(
+                              color: NeoBrutalColors.purple,
+                              width: 2,
+                            ),
                           ),
-                          child: const Icon(Icons.auto_awesome_rounded, size: 16, color: NeoBrutalColors.purple),
+                          child: const Icon(
+                            Icons.auto_awesome_rounded,
+                            size: 16,
+                            color: NeoBrutalColors.purple,
+                          ),
                         ),
                         const SizedBox(width: 10),
                         Text(
@@ -281,6 +389,7 @@ class _InsightScreenState extends ConsumerState<InsightScreen> {
               ),
             ],
           ],
+        ),
         ),
       ),
     );

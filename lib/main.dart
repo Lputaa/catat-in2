@@ -4,6 +4,7 @@ import 'package:intl/date_symbol_data_local.dart';
 import 'app.dart';
 import 'data/database_helper.dart';
 import 'data/settings_service.dart';
+import 'data/ai_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -13,6 +14,7 @@ void main() async {
 
   // Initialize services
   await SettingsService.instance.init();
+  await AiService.init();
   // Touch DB to trigger creation + seed
   await DatabaseHelper.instance.database;
 

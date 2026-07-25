@@ -8,6 +8,7 @@ class SettingsService {
 
   static const _boxName = 'settings';
   static const _themeKey = 'themeMode';
+  static const _apiKeyKey = 'claudeApiKey';
 
   late Box _box;
 
@@ -31,5 +32,20 @@ class SettingsService {
 
   Future<void> setThemeMode(ThemeMode mode) async {
     await _box.put(_themeKey, mode.name);
+  }
+
+  // ── Claude API Key ──
+  String? get apiKey {
+    final value = _box.get(_apiKeyKey) as String?;
+    if (value == null || value.isEmpty) return null;
+    return value;
+  }
+
+  Future<void> setApiKey(String? key) async {
+    if (key == null || key.isEmpty) {
+      await _box.delete(_apiKeyKey);
+    } else {
+      await _box.put(_apiKeyKey, key);
+    }
   }
 }

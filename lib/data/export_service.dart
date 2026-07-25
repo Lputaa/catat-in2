@@ -34,6 +34,10 @@ class ExportService {
       periodLabel = 'semua';
     }
 
+    if (txs.isEmpty) {
+      throw Exception('Tidak ada transaksi untuk diekspor');
+    }
+
     final buffer = StringBuffer();
     // Header
     buffer.writeln('Tanggal,Tipe,Kategori,Akun,Jumlah,Catatan');

@@ -9,6 +9,9 @@ import '../../shared/widgets/neo_card.dart';
 import '../../shared/widgets/neo_icon_container.dart';
 import '../../shared/widgets/neo_section_header.dart';
 import '../../data/export_service.dart';
+import '../../data/backup_service.dart';
+import 'dart:io';
+import 'package:file_picker/file_picker.dart';
 import '../insight/insight_screen.dart';
 import 'category_management_screen.dart';
 import 'account_management_screen.dart';
@@ -116,11 +119,87 @@ class SettingsScreen extends ConsumerWidget {
               icon: Icons.backup_rounded,
               iconColor: NeoBrutalColors.cyan,
               title: 'Backup Data',
-              subtitle: 'Simpan data ke file lokal',
-              onTap: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Fitur segera hadir')),
+              subtitle: 'Ekspor semua data ke file JSON',
+              onTap: () async {
+                final messenger = ScaffoldMessenger.of(context);
+                messenger.showSnackBar(
+                  const SnackBar(content: Text('Membuat backup...')),
                 );
+                try {
+                  final path = await BackupService.instance.exportAndShare();
+                  messenger.clearSnackBars();
+                  messenger.showSnackBar(
+                    SnackBar(content: Text('Backup tersimpan: $path')),
+                  );
+                } catch (e) {
+                  messenger.clearSnackBars();
+                  messenger.showSnackBar(
+                    SnackBar(content: Text('Backup gagal: $e')),
+                  );
+                }
+              },
+            ),
+            const SizedBox(height: 8),
+            _SettingsTile(
+              icon: Icons.restore_rounded,
+              iconColor: NeoBrutalColors.orange,
+              title: 'Restore Data',
+              subtitle: 'Pulihkan data dari file backup',
+              onTap: () async {
+                final messenger = ScaffoldMessenger.of(context);
+                try {
+                  final result = await FilePicker.platform.pickFiles(
+                    type: FileType.custom,
+                    allowedExtensions: ['json'],
+                  );
+                  if (result == null || result.files.single.path == null) return;
+
+                  final file = File(result.files.single.path!);
+                  final json = await file.readAsString();
+
+                  // Validate first
+                  final summary = await BackupService.instance.validate(json);
+
+                  if (!context.mounted) return;
+                  final confirmed = await showDialog<bool>(
+                    context: context,
+                    builder: (ctx) => AlertDialog(
+                      title: const Text('RESTORE DATA?'),
+                      content: Text(
+                        'Semua data saat ini akan diganti dengan:\n\n$summary\n\nLanjutkan?',
+                      ),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.pop(ctx, false),
+                          child: const Text('BATAL'),
+                        ),
+                        TextButton(
+                          onPressed: () => Navigator.pop(ctx, true),
+                          child: const Text(
+                            'RESTORE',
+                            style: TextStyle(color: NeoBrutalColors.danger),
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+
+                  if (confirmed == true) {
+                    messenger.showSnackBar(
+                      const SnackBar(content: Text('Merestore data...')),
+                    );
+                    final count = await BackupService.instance.restoreFromJson(json);
+                    messenger.clearSnackBars();
+                    messenger.showSnackBar(
+                      SnackBar(content: Text('Berhasil restore $count data. Restart app.')),
+                    );
+                  }
+                } catch (e) {
+                  messenger.clearSnackBars();
+                  messenger.showSnackBar(
+                    SnackBar(content: Text('Restore gagal: $e')),
+                  );
+                }
               },
             ),
             const SizedBox(height: 24),
