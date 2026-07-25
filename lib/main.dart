@@ -5,8 +5,29 @@ import 'app.dart';
 import 'data/database_helper.dart';
 import 'data/settings_service.dart';
 import 'data/ai_service.dart';
+import 'data/repositories/recurring_repo.dart';
+import 'data/models/recurring_transaction_model.dart';
 
-void main() async {
+/// Result of processing due recurring transactions on app startup.
+class StartupRecurringResult {
+  final int autoRecorded;
+  final List<RecurringTransactionModel> needsConfirm;
+
+  const StartupRecurringResult({
+    this.autoRecorded = 0,
+    this.needsConfirm = const [],
+  });
+
+  bool get hasResult => autoRecorded > 0 || needsConfirm.isNotEmpty;
+}
+
+/// Holds the result of startup recurring processing.
+/// Set once in main(), read by dashboard.
+final startupRecurringProvider = StateProvider<StartupRecurringResult>(
+  (ref) => const StartupRecurringResult(),
+);
+
+Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   // Initialize locale data for Indonesian date formatting
@@ -18,5 +39,31 @@ void main() async {
   // Touch DB to trigger creation + seed
   await DatabaseHelper.instance.database;
 
-  runApp(const ProviderScope(child: CatatInApp()));
+  // Process due recurring transactions
+  final dueItems = await RecurringRepo().getDue();
+  int autoRecorded = 0;
+  final needsConfirm = <RecurringTransactionModel>[];
+
+  for (final rt in dueItems) {
+    if (rt.autoRecord) {
+      await RecurringRepo().recordAndAdvance(rt);
+      autoRecorded++;
+    } else {
+      needsConfirm.add(rt);
+    }
+  }
+
+  final recurringResult = StartupRecurringResult(
+    autoRecorded: autoRecorded,
+    needsConfirm: needsConfirm,
+  );
+
+  runApp(
+    ProviderScope(
+      overrides: [
+        startupRecurringProvider.overrideWith((ref) => recurringResult),
+      ],
+      child: const CatatInApp(),
+    ),
+  );
 }

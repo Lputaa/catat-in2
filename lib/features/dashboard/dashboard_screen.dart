@@ -15,6 +15,9 @@ import '../../data/models/recurring_transaction_model.dart';
 import '../../data/models/savings_goal_model.dart';
 import '../../data/models/savings_contribution_model.dart';
 import '../../data/repositories/savings_goal_repo.dart';
+import '../../data/repositories/recurring_repo.dart';
+import '../../data/notifiers/transaction_list_notifier.dart';
+import '../../main.dart' show startupRecurringProvider, StartupRecurringResult;
 import '../../shared/widgets/catat_in_app_bar.dart';
 import '../../shared/widgets/neo_card.dart';
 import '../../shared/widgets/neo_icon_container.dart';
@@ -29,6 +32,8 @@ class DashboardScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final recurringResult = ref.watch(startupRecurringProvider);
+
     return Scaffold(
       appBar: const CatatInAppBar(subtitle: 'Dashboard'),
       body: SingleChildScrollView(
@@ -36,6 +41,11 @@ class DashboardScreen extends ConsumerWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // Startup recurring banner
+            if (recurringResult.hasResult) ...[
+              _RecurringStartupBanner(result: recurringResult),
+              const SizedBox(height: 12),
+            ],
             _WalletCarousel(),
             const SizedBox(height: 20),
             // Finance sections - vertical scrollable
@@ -44,6 +54,182 @@ class DashboardScreen extends ConsumerWidget {
             _RecentTransactionsSection(),
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// Banner shown on dashboard when app starts with due recurring transactions.
+class _RecurringStartupBanner extends ConsumerStatefulWidget {
+  const _RecurringStartupBanner({required this.result});
+  final StartupRecurringResult result;
+
+  @override
+  ConsumerState<_RecurringStartupBanner> createState() =>
+      _RecurringStartupBannerState();
+}
+
+class _RecurringStartupBannerState
+    extends ConsumerState<_RecurringStartupBanner> {
+  bool _dismissed = false;
+
+  @override
+  Widget build(BuildContext context) {
+    if (_dismissed) return const SizedBox.shrink();
+
+    final result = widget.result;
+    final hasAuto = result.autoRecorded > 0;
+    final hasManual = result.needsConfirm.isNotEmpty;
+
+    return NeoCard(
+      color: hasManual
+          ? NeoBrutalColors.orange.withValues(alpha: 0.15)
+          : NeoBrutalColors.success.withValues(alpha: 0.15),
+      borderOffset: const Offset(3, 3),
+      padding: const EdgeInsets.all(14),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                hasManual
+                    ? Icons.notification_important_rounded
+                    : Icons.check_circle_outline_rounded,
+                size: 20,
+                color: hasManual
+                    ? NeoBrutalColors.orange
+                    : NeoBrutalColors.success,
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  hasManual
+                      ? 'TAGIHAN JATUH TEMPO'
+                      : 'TRANSAKSI BERULANG DICATAT',
+                  style: GoogleFonts.spaceGrotesk(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: 0.8,
+                    color: hasManual
+                        ? NeoBrutalColors.orange
+                        : NeoBrutalColors.success,
+                  ),
+                ),
+              ),
+              GestureDetector(
+                onTap: () => setState(() => _dismissed = true),
+                child: const Icon(Icons.close_rounded, size: 18),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          if (hasAuto)
+            Text(
+              '${result.autoRecorded} transaksi berulang telah dicatat otomatis.',
+              style: GoogleFonts.spaceGrotesk(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          if (hasManual) ...[
+            if (hasAuto) const SizedBox(height: 4),
+            Text(
+              '${result.needsConfirm.length} tagihan menunggu konfirmasi.',
+              style: GoogleFonts.spaceGrotesk(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(height: 10),
+            // List each manual item with confirm button
+            ...result.needsConfirm.map((rt) => Padding(
+              padding: const EdgeInsets.only(bottom: 6),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      '${rt.note ?? "Transaksi"} — ${NumberFormat.currency(locale: 'id_ID', symbol: 'Rp', decimalDigits: 0).format(rt.amount)}',
+                      style: GoogleFonts.spaceGrotesk(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                  GestureDetector(
+                    onTap: () async {
+                      await RecurringRepo().recordAndAdvance(rt);
+                      if (!context.mounted) return;
+                      HapticFeedback.mediumImpact();
+                      setState(() {
+                        result.needsConfirm.remove(rt);
+                      });
+                      ref.read(transactionListProvider.notifier).refresh();
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(
+                            'Dicatat: ${rt.note ?? "Transaksi"}',
+                          ),
+                        ),
+                      );
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 4,
+                      ),
+                      color: NeoBrutalColors.success,
+                      child: Text(
+                        'CATAT',
+                        style: GoogleFonts.spaceGrotesk(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w900,
+                          color: Colors.white,
+                          letterSpacing: 0.5,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            )),
+            // Confirm all button
+            if (result.needsConfirm.length > 1)
+              GestureDetector(
+                onTap: () async {
+                  final count = result.needsConfirm.length;
+                  for (final rt in List.of(result.needsConfirm)) {
+                    await RecurringRepo().recordAndAdvance(rt);
+                  }
+                  if (!context.mounted) return;
+                  HapticFeedback.mediumImpact();
+                  setState(() => _dismissed = true);
+                  ref.read(transactionListProvider.notifier).refresh();
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('$count transaksi dicatat'),
+                    ),
+                  );
+                },
+                child: Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(vertical: 8),
+                  color: NeoBrutalColors.orange,
+                  child: Center(
+                    child: Text(
+                      'CATAT SEMUA',
+                      style: GoogleFonts.spaceGrotesk(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w900,
+                        color: Colors.white,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+          ],
+        ],
       ),
     );
   }
