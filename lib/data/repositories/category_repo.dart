@@ -37,11 +37,18 @@ class CategoryRepo {
 
   Future<void> update(CategoryModel cat) async {
     final db = await _db.database;
-    await db.update('categories', cat.toMap(), where: 'id = ?', whereArgs: [cat.id]);
+    await db.update(
+      'categories',
+      cat.toMap(),
+      where: 'id = ?',
+      whereArgs: [cat.id],
+    );
   }
 
   Future<void> delete(String id) async {
     final db = await _db.database;
+    // Cascading rule: budgets for a deleted category become orphans — remove them.
+    await db.delete('budgets', where: 'category_id = ?', whereArgs: [id]);
     await db.delete('categories', where: 'id = ?', whereArgs: [id]);
   }
 
@@ -52,6 +59,16 @@ class CategoryRepo {
     final db = await _db.database;
     final result = await db.rawQuery(
       'SELECT COUNT(*) as cnt FROM transactions WHERE category_id = ?',
+      [categoryId],
+    );
+    return (result.first['cnt'] as int?) ?? 0;
+  }
+
+  /// Count recurring transactions using this category.
+  Future<int> countRecurring(String categoryId) async {
+    final db = await _db.database;
+    final result = await db.rawQuery(
+      'SELECT COUNT(*) as cnt FROM recurring_transactions WHERE category_id = ?',
       [categoryId],
     );
     return (result.first['cnt'] as int?) ?? 0;

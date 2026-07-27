@@ -10,13 +10,20 @@ class BudgetWithDetails {
   final CategoryModel category;
   final double spent;
 
+  /// Positive leftover carried from last month (0 when rollover is off).
+  final double carryOver;
+
   BudgetWithDetails({
     required this.budget,
     required this.category,
     required this.spent,
+    this.carryOver = 0,
   });
 
-  double get percent => budget.limitAmount > 0 ? spent / budget.limitAmount : 0;
+  /// Limit for this month including last month's carry-over.
+  double get effectiveLimit => budget.limitAmount + carryOver;
+
+  double get percent => effectiveLimit > 0 ? spent / effectiveLimit : 0;
   bool get isOver => percent > 1.0;
   bool get isWarning => percent >= 0.8 && percent <= 1.0;
 }
@@ -59,10 +66,7 @@ class BudgetListNotifier extends StateNotifier<BudgetListState> {
   final _catRepo = CategoryRepo();
   final _txRepo = TransactionRepo();
 
-  DateTime _currentMonth = DateTime(
-    DateTime.now().year,
-    DateTime.now().month,
-  );
+  DateTime _currentMonth = DateTime(DateTime.now().year, DateTime.now().month);
 
   DateTime get currentMonth => _currentMonth;
 
@@ -88,7 +92,15 @@ class BudgetListNotifier extends StateNotifier<BudgetListState> {
           b.year,
           b.month,
         );
-        details.add(BudgetWithDetails(budget: b, category: cat, spent: spent));
+        final carry = await _repo.getCarryOver(b);
+        details.add(
+          BudgetWithDetails(
+            budget: b,
+            category: cat,
+            spent: spent,
+            carryOver: carry,
+          ),
+        );
       }
       details.sort((a, b) => b.percent.compareTo(a.percent));
 
@@ -144,5 +156,5 @@ class BudgetListNotifier extends StateNotifier<BudgetListState> {
 
 final budgetListProvider =
     StateNotifierProvider<BudgetListNotifier, BudgetListState>(
-  (ref) => BudgetListNotifier(),
-);
+      (ref) => BudgetListNotifier(),
+    );

@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import '../../core/theme/neo_brutal_colors.dart';
 import '../../core/constants/app_constants.dart';
 import '../../data/models/account_model.dart';
+import '../../data/notifiers/dashboard_providers.dart';
 import '../../data/repositories/account_repo.dart';
 import '../../shared/widgets/neo_card.dart';
 import '../../shared/widgets/neo_button.dart';
@@ -12,15 +14,16 @@ import '../../shared/widgets/neo_text_field.dart';
 import '../../shared/widgets/catat_in_app_bar.dart';
 import '../../shared/widgets/dot_pattern_background.dart';
 
-class AccountManagementScreen extends StatefulWidget {
+class AccountManagementScreen extends ConsumerStatefulWidget {
   const AccountManagementScreen({super.key});
 
   @override
-  State<AccountManagementScreen> createState() =>
+  ConsumerState<AccountManagementScreen> createState() =>
       _AccountManagementScreenState();
 }
 
-class _AccountManagementScreenState extends State<AccountManagementScreen> {
+class _AccountManagementScreenState
+    extends ConsumerState<AccountManagementScreen> {
   List<AccountModel> _accounts = [];
   Map<String, double> _balances = {};
   bool _loading = true;
@@ -43,6 +46,9 @@ class _AccountManagementScreenState extends State<AccountManagementScreen> {
     for (final a in accs) {
       balances[a.id] = await repo.getBalance(a.id);
     }
+    if (!mounted) return;
+    // Keep the dashboard wallet carousel in sync with account changes.
+    ref.invalidate(accountsProvider);
     setState(() {
       _accounts = accs;
       _balances = balances;
@@ -68,14 +74,18 @@ class _AccountManagementScreenState extends State<AccountManagementScreen> {
   Future<void> _confirmDelete(AccountModel acc) async {
     final repo = AccountRepo();
     final count = await repo.countTransactions(acc.id);
+    final recurringCount = await repo.countRecurring(acc.id);
     final balance = _balances[acc.id] ?? 0;
 
     if (!mounted) return;
 
-    if (count > 0 || balance != 0) {
-      // Account has transactions or non-zero balance — block deletion
+    if (count > 0 || recurringCount > 0 || balance != 0) {
+      // Account has transactions, recurring, or non-zero balance — block deletion
       final reason = <String>[];
       if (count > 0) reason.add('$count transaksi terkait');
+      if (recurringCount > 0) {
+        reason.add('$recurringCount transaksi berulang');
+      }
       if (balance != 0) reason.add('saldo ${formatter.format(balance)}');
 
       showDialog(
@@ -83,8 +93,8 @@ class _AccountManagementScreenState extends State<AccountManagementScreen> {
         builder: (ctx) => AlertDialog(
           title: const Text('TIDAK BISA DIHAPUS'),
           content: Text(
-            'Akun "${acc.name}" masih memiliki ${reason.join(" dan ")}.\n\n'
-            'Hapus atau pindahkan transaksi terkait, dan pastikan saldo 0.',
+            'Akun "${acc.name}" masih memiliki ${reason.join(", ")}.\n\n'
+            'Hapus atau pindahkan data terkait, dan pastikan saldo 0.',
           ),
           actions: [
             TextButton(
@@ -101,9 +111,7 @@ class _AccountManagementScreenState extends State<AccountManagementScreen> {
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('HAPUS AKUN?'),
-        content: Text(
-          'Akun "${acc.name}" akan dihapus permanen.',
-        ),
+        content: Text('Akun "${acc.name}" akan dihapus permanen.'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
@@ -145,6 +153,10 @@ class _AccountManagementScreenState extends State<AccountManagementScreen> {
                 itemBuilder: (context, i) {
                   final acc = _accounts[i];
                   final balance = _balances[acc.id] ?? 0;
+                  // Credit/paylater wallets get a red identity.
+                  final accColor = acc.isCredit
+                      ? NeoBrutalColors.danger
+                      : NeoBrutalColors.secondary;
                   return Padding(
                     padding: const EdgeInsets.only(bottom: 8),
                     child: NeoCard(
@@ -160,18 +172,13 @@ class _AccountManagementScreenState extends State<AccountManagementScreen> {
                             width: 42,
                             height: 42,
                             decoration: BoxDecoration(
-                              color: NeoBrutalColors.secondary.withValues(
-                                alpha: 0.15,
-                              ),
-                              border: Border.all(
-                                color: NeoBrutalColors.secondary,
-                                width: 2,
-                              ),
+                              color: accColor.withValues(alpha: 0.15),
+                              border: Border.all(color: accColor, width: 2),
                             ),
                             child: Icon(
                               _iconForType(acc.type),
                               size: 20,
-                              color: NeoBrutalColors.secondary,
+                              color: accColor,
                             ),
                           ),
                           const SizedBox(width: 14),
@@ -250,6 +257,8 @@ class _AccountManagementScreenState extends State<AccountManagementScreen> {
         return Icons.account_balance_rounded;
       case AccountType.ewallet:
         return Icons.account_balance_wallet_rounded;
+      case AccountType.paylater:
+        return Icons.credit_card_rounded;
       case AccountType.other:
         return Icons.wallet_rounded;
     }
@@ -308,9 +317,11 @@ class _AccountFormSheetState extends State<_AccountFormSheet> {
 
     // Check duplicate name (case-insensitive)
     final all = await repo.getAll();
-    final duplicate = all.any((a) =>
-        a.name.toLowerCase() == name.toLowerCase() &&
-        a.id != widget.account?.id);
+    final duplicate = all.any(
+      (a) =>
+          a.name.toLowerCase() == name.toLowerCase() &&
+          a.id != widget.account?.id,
+    );
     if (duplicate) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -443,6 +454,42 @@ class _AccountFormSheetState extends State<_AccountFormSheet> {
                 );
               }).toList(),
             ),
+            if (_type == AccountType.paylater) ...[
+              const SizedBox(height: 12),
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: Color.alphaBlend(
+                    NeoBrutalColors.danger.withValues(alpha: 0.1),
+                    NeoBrutalColors.surface,
+                  ),
+                  border: Border.all(color: NeoBrutalColors.ink, width: 2),
+                ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Icon(
+                      Icons.info_outline_rounded,
+                      size: 16,
+                      color: NeoBrutalColors.danger,
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Wallet kredit: belanja paylater dicatat sebagai '
+                        'pengeluaran dari wallet ini (saldo boleh minus). '
+                        'Bayar cicilan = Transfer dari wallet lain ke sini.',
+                        style: GoogleFonts.spaceGrotesk(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                          height: 1.4,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
             const SizedBox(height: 24),
             SizedBox(
               width: double.infinity,
@@ -467,6 +514,8 @@ class _AccountFormSheetState extends State<_AccountFormSheet> {
         return 'Rekening Bank';
       case AccountType.ewallet:
         return 'E-Wallet';
+      case AccountType.paylater:
+        return 'Paylater / Kredit';
       case AccountType.other:
         return 'Lainnya';
     }

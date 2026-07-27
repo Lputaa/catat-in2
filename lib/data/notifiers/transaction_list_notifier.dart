@@ -1,5 +1,7 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../budget_alert_service.dart';
 import '../models/transaction_model.dart';
 import '../models/transaction_filter_model.dart';
 import '../repositories/transaction_repo.dart';
@@ -213,6 +215,8 @@ class TransactionListNotifier extends StateNotifier<TransactionListState> {
       await _repo.insert(tx);
       // Then state (optimistic - add to front since newest)
       state = state.copyWith(transactions: [tx, ...state.transactions]);
+      // Spending alert (fire-and-forget, never blocks the save flow)
+      unawaited(BudgetAlertService.checkAfterExpense(tx));
     } catch (e) {
       // Rollback: refetch from DB
       await _refreshFromDb();

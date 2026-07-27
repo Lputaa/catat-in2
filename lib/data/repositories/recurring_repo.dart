@@ -1,4 +1,5 @@
 import 'package:uuid/uuid.dart';
+import '../budget_alert_service.dart';
 import '../database_helper.dart';
 import '../models/recurring_transaction_model.dart';
 import '../models/transaction_model.dart';
@@ -10,7 +11,10 @@ class RecurringRepo {
 
   Future<List<RecurringTransactionModel>> getAll() async {
     final db = await _db.database;
-    final maps = await db.query('recurring_transactions', orderBy: 'next_date ASC');
+    final maps = await db.query(
+      'recurring_transactions',
+      orderBy: 'next_date ASC',
+    );
     return maps.map(RecurringTransactionModel.fromMap).toList();
   }
 
@@ -36,9 +40,28 @@ class RecurringRepo {
     return maps.map(RecurringTransactionModel.fromMap).toList();
   }
 
+  /// Active recurring transactions whose next date falls on tomorrow.
+  Future<List<RecurringTransactionModel>> getDueTomorrow() async {
+    final now = DateTime.now();
+    final start = DateTime(now.year, now.month, now.day + 1);
+    final end = DateTime(now.year, now.month, now.day + 2);
+    final db = await _db.database;
+    final maps = await db.query(
+      'recurring_transactions',
+      where: 'active = 1 AND next_date >= ? AND next_date < ?',
+      whereArgs: [start.millisecondsSinceEpoch, end.millisecondsSinceEpoch],
+      orderBy: 'next_date ASC',
+    );
+    return maps.map(RecurringTransactionModel.fromMap).toList();
+  }
+
   Future<RecurringTransactionModel?> getById(String id) async {
     final db = await _db.database;
-    final maps = await db.query('recurring_transactions', where: 'id = ?', whereArgs: [id]);
+    final maps = await db.query(
+      'recurring_transactions',
+      where: 'id = ?',
+      whereArgs: [id],
+    );
     if (maps.isEmpty) return null;
     return RecurringTransactionModel.fromMap(maps.first);
   }
@@ -50,7 +73,12 @@ class RecurringRepo {
 
   Future<void> update(RecurringTransactionModel rt) async {
     final db = await _db.database;
-    await db.update('recurring_transactions', rt.toMap(), where: 'id = ?', whereArgs: [rt.id]);
+    await db.update(
+      'recurring_transactions',
+      rt.toMap(),
+      where: 'id = ?',
+      whereArgs: [rt.id],
+    );
   }
 
   Future<void> delete(String id) async {
@@ -72,7 +100,7 @@ class RecurringRepo {
         final type = rt.transactionType == 'income'
             ? TransactionType.income
             : TransactionType.expense;
-        await txRepo.insert(TransactionModel(
+        final tx = TransactionModel(
           id: txRepo.newId(),
           type: type,
           amount: rt.amount,
@@ -80,7 +108,9 @@ class RecurringRepo {
           accountId: rt.accountId,
           date: rt.nextDate,
           note: rt.note,
-        ));
+        );
+        await txRepo.insert(tx);
+        await BudgetAlertService.checkAfterExpense(tx);
         // Advance next date
         await update(rt.copyWith(nextDate: rt.calculateNextDate()));
       } else {
@@ -97,7 +127,7 @@ class RecurringRepo {
     final type = rt.transactionType == 'income'
         ? TransactionType.income
         : TransactionType.expense;
-    await txRepo.insert(TransactionModel(
+    final tx = TransactionModel(
       id: txRepo.newId(),
       type: type,
       amount: rt.amount,
@@ -105,7 +135,9 @@ class RecurringRepo {
       accountId: rt.accountId,
       date: rt.nextDate,
       note: rt.note,
-    ));
+    );
+    await txRepo.insert(tx);
+    await BudgetAlertService.checkAfterExpense(tx);
     await update(rt.copyWith(nextDate: rt.calculateNextDate()));
   }
 

@@ -33,13 +33,20 @@ class _FinanceTabsWidgetState extends ConsumerState<FinanceTabsWidget> {
           // Header
           Text(
             'KEUANGAN SAYA',
-            style: GoogleFonts.spaceGrotesk(fontSize: 12, fontWeight: FontWeight.w900, letterSpacing: 1.5),
+            style: GoogleFonts.spaceGrotesk(
+              fontSize: 12,
+              fontWeight: FontWeight.w900,
+              letterSpacing: 1.5,
+            ),
           ),
           const SizedBox(height: 12),
           // Tab bar
           Container(
             decoration: BoxDecoration(
-              border: Border.all(color: NeoBrutalColors.ink, width: AppConstants.borderSecondary),
+              border: Border.all(
+                color: NeoBrutalColors.ink,
+                width: AppConstants.borderSecondary,
+              ),
             ),
             child: Row(
               children: [
@@ -50,15 +57,24 @@ class _FinanceTabsWidgetState extends ConsumerState<FinanceTabsWidget> {
                   selected: _activeTab == FinanceTab.budget,
                   onTap: () => setState(() => _activeTab = FinanceTab.budget),
                 ),
-                Container(width: AppConstants.borderSecondary, color: NeoBrutalColors.ink, height: 36),
+                Container(
+                  width: AppConstants.borderSecondary,
+                  color: NeoBrutalColors.ink,
+                  height: 36,
+                ),
                 _TabButton(
                   label: 'TAGIHAN',
                   icon: Icons.repeat_rounded,
                   color: NeoBrutalColors.orange,
                   selected: _activeTab == FinanceTab.recurring,
-                  onTap: () => setState(() => _activeTab = FinanceTab.recurring),
+                  onTap: () =>
+                      setState(() => _activeTab = FinanceTab.recurring),
                 ),
-                Container(width: AppConstants.borderSecondary, color: NeoBrutalColors.ink, height: 36),
+                Container(
+                  width: AppConstants.borderSecondary,
+                  color: NeoBrutalColors.ink,
+                  height: 36,
+                ),
                 _TabButton(
                   label: 'TABUNGAN',
                   icon: Icons.savings_rounded,
@@ -118,7 +134,11 @@ class _TabButton extends StatelessWidget {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(icon, size: 16, color: selected ? color : NeoBrutalColors.muted),
+              Icon(
+                icon,
+                size: 16,
+                color: selected ? color : NeoBrutalColors.muted,
+              ),
               const SizedBox(width: 4),
               Text(
                 label,
@@ -144,7 +164,11 @@ class _BudgetTabContent extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final budgets = ref.watch(budgetOverviewProvider);
-    final formatter = NumberFormat.currency(locale: 'id_ID', symbol: 'Rp', decimalDigits: 0);
+    final formatter = NumberFormat.currency(
+      locale: 'id_ID',
+      symbol: 'Rp',
+      decimalDigits: 0,
+    );
 
     if (budgets.isEmpty) {
       return _EmptyTabContent(
@@ -152,77 +176,124 @@ class _BudgetTabContent extends ConsumerWidget {
         message: 'Belum ada budget',
         ctaLabel: 'Atur Budget',
         color: NeoBrutalColors.green,
-        onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const BudgetScreen())),
+        onTap: () => Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const BudgetScreen()),
+        ),
       );
     }
 
     double totalLimit = 0;
     double totalSpent = 0;
     for (final b in budgets) {
-      totalLimit += b.budget.limitAmount;
+      totalLimit += b.effectiveLimit;
       totalSpent += b.spent;
     }
     final totalPercent = totalLimit > 0 ? totalSpent / totalLimit : 0.0;
     final totalColor = totalPercent > 1.0
         ? NeoBrutalColors.danger
         : totalPercent >= 0.8
-            ? NeoBrutalColors.orange
-            : NeoBrutalColors.success;
+        ? NeoBrutalColors.orange
+        : NeoBrutalColors.success;
 
     final warnings = budgets.where((b) => b.percent >= 0.8).toList();
 
     return GestureDetector(
-          onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const BudgetScreen())),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+      onTap: () => Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => const BudgetScreen()),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Total progress
+          Row(
             children: [
-              // Total progress
-              Row(
-                children: [
-                  Text('${(totalPercent * 100).toStringAsFixed(0)}%',
-                    style: GoogleFonts.spaceGrotesk(fontSize: 18, fontWeight: FontWeight.w900, color: totalColor)),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: SizedBox(
-                      height: 10,
-                      child: Stack(
-                        children: [
-                          Container(decoration: BoxDecoration(color: NeoBrutalColors.muted, border: Border.all(color: NeoBrutalColors.ink, width: 1))),
-                          FractionallySizedBox(widthFactor: totalPercent.clamp(0, 1), child: Container(color: totalColor)),
-                        ],
-                      ),
-                    ),
-                  ),
-                ],
+              Text(
+                '${(totalPercent * 100).toStringAsFixed(0)}%',
+                style: GoogleFonts.spaceGrotesk(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w900,
+                  color: totalColor,
+                ),
               ),
-              const SizedBox(height: 4),
-              Text('${formatter.format(totalSpent)} / ${formatter.format(totalLimit)}',
-                style: GoogleFonts.spaceGrotesk(fontSize: 11, fontWeight: FontWeight.w600)),
-              if (warnings.isNotEmpty) ...[
-                const SizedBox(height: 8),
-                ...warnings.take(2).map((w) => Padding(
-                  padding: const EdgeInsets.only(bottom: 3),
-                  child: Row(
+              const SizedBox(width: 10),
+              Expanded(
+                child: SizedBox(
+                  height: 10,
+                  child: Stack(
                     children: [
-                      Icon(w.isOver ? Icons.warning_amber_rounded : Icons.info_outline_rounded, size: 14,
-                        color: w.isOver ? NeoBrutalColors.danger : NeoBrutalColors.orange),
-                      const SizedBox(width: 4),
-                      Expanded(
-                        child: Text(
-                          '${w.category.name} ${w.isOver ? "melebihi!" : "${(w.percent * 100).toStringAsFixed(0)}%"}',
-                          style: GoogleFonts.spaceGrotesk(fontSize: 10, fontWeight: FontWeight.w700,
-                            color: w.isOver ? NeoBrutalColors.danger : NeoBrutalColors.orange),
+                      Container(
+                        decoration: BoxDecoration(
+                          color: NeoBrutalColors.muted,
+                          border: Border.all(
+                            color: NeoBrutalColors.ink,
+                            width: 1,
+                          ),
                         ),
+                      ),
+                      FractionallySizedBox(
+                        widthFactor: totalPercent.clamp(0, 1),
+                        child: Container(color: totalColor),
                       ),
                     ],
                   ),
-                )),
-              ],
-              const SizedBox(height: 8),
-              _ViewAllLink(label: 'Lihat semua budget', color: NeoBrutalColors.green),
+                ),
+              ),
             ],
           ),
-        );
+          const SizedBox(height: 4),
+          Text(
+            '${formatter.format(totalSpent)} / ${formatter.format(totalLimit)}',
+            style: GoogleFonts.spaceGrotesk(
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          if (warnings.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            ...warnings
+                .take(2)
+                .map(
+                  (w) => Padding(
+                    padding: const EdgeInsets.only(bottom: 3),
+                    child: Row(
+                      children: [
+                        Icon(
+                          w.isOver
+                              ? Icons.warning_amber_rounded
+                              : Icons.info_outline_rounded,
+                          size: 14,
+                          color: w.isOver
+                              ? NeoBrutalColors.danger
+                              : NeoBrutalColors.orange,
+                        ),
+                        const SizedBox(width: 4),
+                        Expanded(
+                          child: Text(
+                            '${w.category.name} ${w.isOver ? "melebihi!" : "${(w.percent * 100).toStringAsFixed(0)}%"}',
+                            style: GoogleFonts.spaceGrotesk(
+                              fontSize: 10,
+                              fontWeight: FontWeight.w700,
+                              color: w.isOver
+                                  ? NeoBrutalColors.danger
+                                  : NeoBrutalColors.orange,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+          ],
+          const SizedBox(height: 8),
+          _ViewAllLink(
+            label: 'Lihat semua budget',
+            color: NeoBrutalColors.green,
+          ),
+        ],
+      ),
+    );
   }
 }
 
@@ -233,7 +304,11 @@ class _RecurringTabContent extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final upcoming = ref.watch(upcomingRecurringProvider);
-    final formatter = NumberFormat.currency(locale: 'id_ID', symbol: 'Rp', decimalDigits: 0);
+    final formatter = NumberFormat.currency(
+      locale: 'id_ID',
+      symbol: 'Rp',
+      decimalDigits: 0,
+    );
 
     if (upcoming.isEmpty) {
       return _EmptyTabContent(
@@ -241,47 +316,88 @@ class _RecurringTabContent extends ConsumerWidget {
         message: 'Belum ada tagihan',
         ctaLabel: 'Atur Tagihan',
         color: NeoBrutalColors.orange,
-        onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const RecurringScreen())),
+        onTap: () => Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const RecurringScreen()),
+        ),
       );
     }
 
     return GestureDetector(
-      onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const RecurringScreen())),
+      onTap: () => Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => const RecurringScreen()),
+      ),
       child: Column(
         children: [
           ...upcoming.map((rt) {
             final isDue = rt.nextDate.isBefore(DateTime.now());
             final isIncome = rt.transactionType == 'income';
             final daysUntil = rt.nextDate.difference(DateTime.now()).inDays;
-            String dueText = isDue ? 'JATUH TEMPO' : daysUntil == 0 ? 'Hari ini' : daysUntil == 1 ? 'Besok' : '$daysUntil hari lagi';
+            String dueText = isDue
+                ? 'JATUH TEMPO'
+                : daysUntil == 0
+                ? 'Hari ini'
+                : daysUntil == 1
+                ? 'Besok'
+                : '$daysUntil hari lagi';
 
             return Padding(
               padding: const EdgeInsets.only(bottom: 6),
               child: Row(
                 children: [
-                  Icon(isDue ? Icons.warning_amber_rounded : Icons.repeat_rounded, size: 16,
-                    color: isDue ? NeoBrutalColors.danger : NeoBrutalColors.orange),
+                  Icon(
+                    isDue ? Icons.warning_amber_rounded : Icons.repeat_rounded,
+                    size: 16,
+                    color: isDue
+                        ? NeoBrutalColors.danger
+                        : NeoBrutalColors.orange,
+                  ),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(rt.note ?? 'Transaksi Berulang',
-                          style: GoogleFonts.spaceGrotesk(fontSize: 12, fontWeight: FontWeight.w700)),
-                        Text('${rt.frequencyLabel} • ${DateFormat('dd MMM').format(rt.nextDate)}',
-                          style: GoogleFonts.spaceGrotesk(fontSize: 9, fontWeight: FontWeight.w500)),
+                        Text(
+                          rt.note ?? 'Transaksi Berulang',
+                          style: GoogleFonts.spaceGrotesk(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        Text(
+                          '${rt.frequencyLabel} • ${DateFormat('dd MMM').format(rt.nextDate)}',
+                          style: GoogleFonts.spaceGrotesk(
+                            fontSize: 9,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
                       ],
                     ),
                   ),
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
-                      Text('${isIncome ? '+' : '-'}${formatter.format(rt.amount)}',
-                        style: GoogleFonts.spaceGrotesk(fontSize: 12, fontWeight: FontWeight.w800,
-                          color: isIncome ? NeoBrutalColors.success : NeoBrutalColors.danger)),
-                      Text(dueText,
-                        style: GoogleFonts.spaceGrotesk(fontSize: 9, fontWeight: FontWeight.w700,
-                          color: isDue ? NeoBrutalColors.danger : NeoBrutalColors.orange)),
+                      Text(
+                        '${isIncome ? '+' : '-'}${formatter.format(rt.amount)}',
+                        style: GoogleFonts.spaceGrotesk(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w800,
+                          color: isIncome
+                              ? NeoBrutalColors.success
+                              : NeoBrutalColors.danger,
+                        ),
+                      ),
+                      Text(
+                        dueText,
+                        style: GoogleFonts.spaceGrotesk(
+                          fontSize: 9,
+                          fontWeight: FontWeight.w700,
+                          color: isDue
+                              ? NeoBrutalColors.danger
+                              : NeoBrutalColors.orange,
+                        ),
+                      ),
                     ],
                   ),
                 ],
@@ -289,7 +405,10 @@ class _RecurringTabContent extends ConsumerWidget {
             );
           }),
           const SizedBox(height: 6),
-          _ViewAllLink(label: 'Lihat semua tagihan', color: NeoBrutalColors.orange),
+          _ViewAllLink(
+            label: 'Lihat semua tagihan',
+            color: NeoBrutalColors.orange,
+          ),
         ],
       ),
     );
@@ -303,7 +422,11 @@ class _SavingsTabContent extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final goals = ref.watch(savingsGoalsDashboardProvider);
-    final formatter = NumberFormat.currency(locale: 'id_ID', symbol: 'Rp', decimalDigits: 0);
+    final formatter = NumberFormat.currency(
+      locale: 'id_ID',
+      symbol: 'Rp',
+      decimalDigits: 0,
+    );
 
     if (goals.isEmpty) {
       return _EmptyTabContent(
@@ -311,18 +434,26 @@ class _SavingsTabContent extends ConsumerWidget {
         message: 'Belum ada target',
         ctaLabel: 'Buat Target',
         color: NeoBrutalColors.secondary,
-        onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SavingsScreen())),
+        onTap: () => Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const SavingsScreen()),
+        ),
       );
     }
 
     return GestureDetector(
-      onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SavingsScreen())),
+      onTap: () => Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => const SavingsScreen()),
+      ),
       child: Column(
         children: [
           ...goals.take(3).map((goal) {
             final statusColor = goal.isComplete
                 ? NeoBrutalColors.success
-                : goal.percent >= 0.8 ? NeoBrutalColors.orange : NeoBrutalColors.secondary;
+                : goal.percent >= 0.8
+                ? NeoBrutalColors.orange
+                : NeoBrutalColors.secondary;
 
             return Padding(
               padding: const EdgeInsets.only(bottom: 8),
@@ -331,15 +462,32 @@ class _SavingsTabContent extends ConsumerWidget {
                 children: [
                   Row(
                     children: [
-                      Icon(goal.isComplete ? Icons.check_circle_rounded : Icons.savings_rounded,
-                        size: 14, color: statusColor),
+                      Icon(
+                        goal.isComplete
+                            ? Icons.check_circle_rounded
+                            : Icons.savings_rounded,
+                        size: 14,
+                        color: statusColor,
+                      ),
                       const SizedBox(width: 6),
                       Expanded(
-                        child: Text(goal.name.toUpperCase(),
-                          style: GoogleFonts.spaceGrotesk(fontSize: 10, fontWeight: FontWeight.w900, letterSpacing: 0.5)),
+                        child: Text(
+                          goal.name.toUpperCase(),
+                          style: GoogleFonts.spaceGrotesk(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w900,
+                            letterSpacing: 0.5,
+                          ),
+                        ),
                       ),
-                      Text('${(goal.percent * 100).toStringAsFixed(0)}%',
-                        style: GoogleFonts.spaceGrotesk(fontSize: 12, fontWeight: FontWeight.w900, color: statusColor)),
+                      Text(
+                        '${(goal.percent * 100).toStringAsFixed(0)}%',
+                        style: GoogleFonts.spaceGrotesk(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w900,
+                          color: statusColor,
+                        ),
+                      ),
                     ],
                   ),
                   const SizedBox(height: 4),
@@ -347,20 +495,39 @@ class _SavingsTabContent extends ConsumerWidget {
                     height: 6,
                     child: Stack(
                       children: [
-                        Container(decoration: BoxDecoration(color: NeoBrutalColors.muted, border: Border.all(color: NeoBrutalColors.ink, width: 0.5))),
-                        FractionallySizedBox(widthFactor: goal.percent.clamp(0, 1), child: Container(color: statusColor)),
+                        Container(
+                          decoration: BoxDecoration(
+                            color: NeoBrutalColors.muted,
+                            border: Border.all(
+                              color: NeoBrutalColors.ink,
+                              width: 0.5,
+                            ),
+                          ),
+                        ),
+                        FractionallySizedBox(
+                          widthFactor: goal.percent.clamp(0, 1),
+                          child: Container(color: statusColor),
+                        ),
                       ],
                     ),
                   ),
                   const SizedBox(height: 2),
-                  Text('${formatter.format(goal.savedAmount)} / ${formatter.format(goal.targetAmount)}',
-                    style: GoogleFonts.spaceGrotesk(fontSize: 9, fontWeight: FontWeight.w600)),
+                  Text(
+                    '${formatter.format(goal.savedAmount)} / ${formatter.format(goal.targetAmount)}',
+                    style: GoogleFonts.spaceGrotesk(
+                      fontSize: 9,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
                 ],
               ),
             );
           }),
           const SizedBox(height: 4),
-          _ViewAllLink(label: 'Lihat semua target', color: NeoBrutalColors.secondary),
+          _ViewAllLink(
+            label: 'Lihat semua target',
+            color: NeoBrutalColors.secondary,
+          ),
         ],
       ),
     );
@@ -394,10 +561,22 @@ class _EmptyTabContent extends StatelessWidget {
           children: [
             Icon(icon, size: 32, color: NeoBrutalColors.muted),
             const SizedBox(height: 6),
-            Text(message, style: GoogleFonts.spaceGrotesk(fontSize: 12, fontWeight: FontWeight.w600)),
+            Text(
+              message,
+              style: GoogleFonts.spaceGrotesk(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
             const SizedBox(height: 4),
-            Text(ctaLabel,
-              style: GoogleFonts.spaceGrotesk(fontSize: 12, fontWeight: FontWeight.w700, color: color)),
+            Text(
+              ctaLabel,
+              style: GoogleFonts.spaceGrotesk(
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+                color: color,
+              ),
+            ),
           ],
         ),
       ),
@@ -415,8 +594,14 @@ class _ViewAllLink extends StatelessWidget {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        Text(label,
-          style: GoogleFonts.spaceGrotesk(fontSize: 11, fontWeight: FontWeight.w700, color: color)),
+        Text(
+          label,
+          style: GoogleFonts.spaceGrotesk(
+            fontSize: 11,
+            fontWeight: FontWeight.w700,
+            color: color,
+          ),
+        ),
         const SizedBox(width: 4),
         Icon(Icons.chevron_right_rounded, size: 16, color: color),
       ],

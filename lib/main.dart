@@ -3,9 +3,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'app.dart';
 import 'data/database_helper.dart';
+import 'data/notification_service.dart';
 import 'data/settings_service.dart';
-import 'data/ai_service.dart';
 import 'data/repositories/recurring_repo.dart';
+import 'data/repositories/debt_repo.dart';
 import 'data/models/recurring_transaction_model.dart';
 
 /// Result of processing due recurring transactions on app startup.
@@ -35,7 +36,7 @@ Future<void> main() async {
 
   // Initialize services
   await SettingsService.instance.init();
-  await AiService.init();
+  await NotificationService.instance.init();
   // Touch DB to trigger creation + seed
   await DatabaseHelper.instance.database;
 
@@ -57,6 +58,26 @@ Future<void> main() async {
     autoRecorded: autoRecorded,
     needsConfirm: needsConfirm,
   );
+
+  // Remind about recurring transactions due tomorrow (local notification)
+  final dueTomorrow = await RecurringRepo().getDueTomorrow();
+  if (dueTomorrow.isNotEmpty) {
+    await NotificationService.instance.showRecurringDueTomorrow(
+      count: dueTomorrow.length,
+      names: dueTomorrow.map((rt) => rt.note ?? 'Transaksi').join(', '),
+    );
+  }
+
+  // Remind about debts due today/tomorrow (local notification)
+  final debtsDueSoon = await DebtRepo().getDueSoon();
+  if (debtsDueSoon.isNotEmpty) {
+    await NotificationService.instance.showDebtDueSoon(
+      count: debtsDueSoon.length,
+      names: debtsDueSoon
+          .map((d) => '${d.typeLabel} ${d.counterpart}')
+          .join(', '),
+    );
+  }
 
   runApp(
     ProviderScope(

@@ -11,8 +11,8 @@ import '../../data/models/transaction_filter_model.dart';
 import '../../data/models/category_model.dart';
 import '../../data/models/account_model.dart';
 import '../../data/notifiers/transaction_list_notifier.dart';
+import '../../data/notifiers/dashboard_providers.dart';
 import '../../data/repositories/category_repo.dart';
-import '../../data/repositories/account_repo.dart';
 import '../../shared/widgets/catat_in_app_bar.dart';
 import '../../shared/widgets/neo_card.dart';
 import '../../shared/widgets/neo_icon_container.dart';
@@ -29,14 +29,16 @@ final _categoryMapProvider = FutureProvider<Map<String, CategoryModel>>((
   return {for (final c in cats) c.id: c};
 });
 
+// Derived from the global accountsProvider so account changes (add/edit/
+// delete in settings) propagate here automatically.
 final _accountsProvider = FutureProvider<List<AccountModel>>((ref) {
-  return AccountRepo().getAll();
+  return ref.watch(accountsProvider.future);
 });
 
 final _accountMapProvider = FutureProvider<Map<String, AccountModel>>((
   ref,
 ) async {
-  final accs = await AccountRepo().getAll();
+  final accs = await ref.watch(accountsProvider.future);
   return {for (final a in accs) a.id: a};
 });
 
@@ -831,11 +833,18 @@ class _TransactionScreenState extends ConsumerState<TransactionScreen> {
       );
     }
 
-    return const NeoEmptyState(
+    return NeoEmptyState(
       icon: Icons.receipt_long_rounded,
       title: 'Belum Ada Transaksi',
-      subtitle: 'Tekan tombol + untuk memulai',
-      ctaColor: NeoBrutalColors.secondary,
+      subtitle: 'Catat pengeluaran atau pemasukan pertamamu sekarang',
+      ctaLabel: 'Tambah Transaksi',
+      ctaColor: NeoBrutalColors.primary,
+      onCta: () async {
+        final result = await AddTransactionSheet.show(context);
+        if (result == true) {
+          ref.read(transactionListProvider.notifier).refresh();
+        }
+      },
     );
   }
 

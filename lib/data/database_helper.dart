@@ -18,7 +18,7 @@ class DatabaseHelper {
     final path = join(await getDatabasesPath(), 'catat_in.db');
     return openDatabase(
       path,
-      version: 4,
+      version: 6,
       onCreate: _onCreate,
       onUpgrade: _onUpgrade,
     );
@@ -66,7 +66,20 @@ class DatabaseHelper {
         limit_amount REAL NOT NULL,
         year INTEGER NOT NULL,
         month INTEGER NOT NULL,
+        rollover INTEGER NOT NULL DEFAULT 0,
         FOREIGN KEY (category_id) REFERENCES categories(id)
+      )
+    ''');
+
+    await db.execute('''
+      CREATE TABLE transaction_templates (
+        id TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        type TEXT NOT NULL,
+        amount REAL NOT NULL,
+        category_id TEXT NOT NULL,
+        account_id TEXT NOT NULL,
+        note TEXT
       )
     ''');
 
@@ -108,7 +121,53 @@ class DatabaseHelper {
       )
     ''');
 
+    await db.execute('''
+      CREATE TABLE debts (
+        id TEXT PRIMARY KEY,
+        type TEXT NOT NULL,
+        counterpart TEXT NOT NULL,
+        amount REAL NOT NULL,
+        paid_amount REAL NOT NULL DEFAULT 0,
+        due_date INTEGER,
+        note TEXT,
+        created_at INTEGER NOT NULL
+      )
+    ''');
+
+    await db.execute('''
+      CREATE TABLE debt_payments (
+        id TEXT PRIMARY KEY,
+        debt_id TEXT NOT NULL,
+        amount REAL NOT NULL,
+        date INTEGER NOT NULL,
+        note TEXT,
+        FOREIGN KEY (debt_id) REFERENCES debts(id)
+      )
+    ''');
+
     // Seed defaults
+    await _seedCategories(db);
+    await _seedAccounts(db);
+  }
+
+  /// Wipe all user data and re-seed default categories & accounts.
+  /// Used by the "Hapus Semua Data" feature in Settings.
+  Future<void> wipeAllData() async {
+    final db = await database;
+    await db.transaction((txn) async {
+      // Delete in reverse FK order
+      await txn.delete('debt_payments');
+      await txn.delete('debts');
+      await txn.delete('savings_contributions');
+      await txn.delete('savings_goals');
+      await txn.delete('recurring_transactions');
+      await txn.delete('transaction_templates');
+      await txn.delete('budgets');
+      await txn.delete('transactions');
+      await txn.delete('accounts');
+      await txn.delete('categories');
+    });
+    // Restore factory defaults so the app stays usable
     await _seedCategories(db);
     await _seedAccounts(db);
   }
@@ -252,6 +311,48 @@ class DatabaseHelper {
       await db.execute(
         'ALTER TABLE transactions ADD COLUMN to_account_id TEXT',
       );
+    }
+    if (oldVersion < 5) {
+      // Budget rollover flag + quick-entry transaction templates.
+      await db.execute(
+        'ALTER TABLE budgets ADD COLUMN rollover INTEGER NOT NULL DEFAULT 0',
+      );
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS transaction_templates (
+          id TEXT PRIMARY KEY,
+          name TEXT NOT NULL,
+          type TEXT NOT NULL,
+          amount REAL NOT NULL,
+          category_id TEXT NOT NULL,
+          account_id TEXT NOT NULL,
+          note TEXT
+        )
+      ''');
+    }
+    if (oldVersion < 6) {
+      // Hutang/Piutang (debt & receivable) ledger with partial payments.
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS debts (
+          id TEXT PRIMARY KEY,
+          type TEXT NOT NULL,
+          counterpart TEXT NOT NULL,
+          amount REAL NOT NULL,
+          paid_amount REAL NOT NULL DEFAULT 0,
+          due_date INTEGER,
+          note TEXT,
+          created_at INTEGER NOT NULL
+        )
+      ''');
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS debt_payments (
+          id TEXT PRIMARY KEY,
+          debt_id TEXT NOT NULL,
+          amount REAL NOT NULL,
+          date INTEGER NOT NULL,
+          note TEXT,
+          FOREIGN KEY (debt_id) REFERENCES debts(id)
+        )
+      ''');
     }
   }
 

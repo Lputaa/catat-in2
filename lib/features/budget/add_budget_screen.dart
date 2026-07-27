@@ -25,6 +25,7 @@ class _AddBudgetScreenState extends State<AddBudgetScreen> {
   final _amountController = TextEditingController();
   List<CategoryModel> _categories = [];
   CategoryModel? _selectedCategory;
+  bool _rollover = false;
   bool _loading = true;
 
   @override
@@ -69,6 +70,7 @@ class _AddBudgetScreenState extends State<AddBudgetScreen> {
         limitAmount: amount,
         year: widget.year,
         month: widget.month,
+        rollover: _rollover,
       ),
     );
 
@@ -185,6 +187,43 @@ class _AddBudgetScreenState extends State<AddBudgetScreen> {
                 hint: '0',
                 keyboardType: TextInputType.number,
                 prefixIcon: Icons.payments_rounded,
+              ),
+              const SizedBox(height: 16),
+              // Rollover toggle — carry positive leftover into next month
+              Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'ROLLOVER SISA BUDGET',
+                          style: GoogleFonts.spaceGrotesk(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w900,
+                            letterSpacing: 0.8,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          'Sisa bulan ini ditambahkan ke limit bulan depan',
+                          style: GoogleFonts.spaceGrotesk(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Switch(
+                    value: _rollover,
+                    activeThumbColor: NeoBrutalColors.secondary,
+                    onChanged: (v) {
+                      HapticFeedback.selectionClick();
+                      setState(() => _rollover = v);
+                    },
+                  ),
+                ],
               ),
               const SizedBox(height: 32),
               SizedBox(

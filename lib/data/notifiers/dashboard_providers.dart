@@ -3,8 +3,12 @@ import '../models/transaction_model.dart';
 import '../models/account_model.dart';
 import '../models/recurring_transaction_model.dart';
 import '../models/savings_goal_model.dart';
+import '../models/transaction_template_model.dart';
+import '../models/debt_model.dart';
 import '../repositories/account_repo.dart';
+import '../repositories/template_repo.dart';
 import 'budget_list_notifier.dart';
+import 'debt_list_notifier.dart';
 import 'recurring_list_notifier.dart';
 import 'savings_list_notifier.dart';
 import 'transaction_list_notifier.dart';
@@ -12,6 +16,11 @@ import 'transaction_list_notifier.dart';
 // ── Accounts (FutureProvider - still needed for account list) ──
 final accountsProvider = FutureProvider<List<AccountModel>>((ref) {
   return AccountRepo().getAll();
+});
+
+// ── Quick-Entry Templates ──
+final templatesProvider = FutureProvider<List<TransactionTemplateModel>>((ref) {
+  return TemplateRepo().getAll();
 });
 
 // ── Account Balances (computed from transactions) ──
@@ -108,4 +117,9 @@ final upcomingRecurringProvider = Provider<List<RecurringTransactionModel>>((
 // ── Savings Goals (Provider - watches SavingsListNotifier) ──
 final savingsGoalsDashboardProvider = Provider<List<SavingsGoalModel>>((ref) {
   return ref.watch(savingsListProvider).goals;
+});
+
+// ── Debts (Provider - watches DebtListNotifier) ──
+final debtsDashboardProvider = Provider<List<DebtModel>>((ref) {
+  return ref.watch(debtListProvider).debts;
 });

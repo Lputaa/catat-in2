@@ -1,9 +1,8 @@
 import 'dart:convert';
 import 'dart:io';
+import 'package:file_picker/file_picker.dart';
+import 'package:flutter/foundation.dart';
 import 'package:intl/intl.dart';
-import 'package:path/path.dart';
-import 'package:path_provider/path_provider.dart';
-import 'package:share_plus/share_plus.dart';
 import 'database_helper.dart';
 
 /// Backup & Restore service for Catat-In.
@@ -14,22 +13,29 @@ class BackupService {
 
   static const _backupVersion = 1;
 
-  /// Export all data to a JSON file and open the share dialog.
-  /// Returns the path of the exported file.
-  Future<String> exportAndShare() async {
+  /// Export all data to a JSON file at a user-chosen location via the
+  /// system "save as" dialog. Returns the saved path, or null if the user
+  /// cancelled the dialog.
+  Future<String?> exportWithPicker() async {
     final json = await _exportToJson();
-    final dir = await getTemporaryDirectory();
     final now = DateFormat('yyyy-MM-dd_HHmm').format(DateTime.now());
-    final filePath = join(dir.path, 'catat-in-backup_$now.json');
-    final file = File(filePath);
-    await file.writeAsString(json);
+    final fileName = 'catat-in-backup_$now.json';
 
-    await Share.shareXFiles(
-      [XFile(filePath)],
-      subject: 'Catat-In Backup',
+    // On Android/iOS file_picker writes the provided bytes itself (SAF);
+    // on desktop it only returns the chosen path.
+    final savedPath = await FilePicker.platform.saveFile(
+      dialogTitle: 'Simpan Backup Catat-In',
+      fileName: fileName,
+      type: FileType.custom,
+      allowedExtensions: ['json'],
+      bytes: Uint8List.fromList(utf8.encode(json)),
     );
+    if (savedPath == null) return null;
 
-    return filePath;
+    if (!Platform.isAndroid && !Platform.isIOS) {
+      await File(savedPath).writeAsString(json);
+    }
+    return savedPath;
   }
 
   /// Export all data as a JSON string.
@@ -44,6 +50,9 @@ class BackupService {
       'savings_goals',
       'savings_contributions',
       'recurring_transactions',
+      'transaction_templates',
+      'debts',
+      'debt_payments',
     ];
 
     final data = <String, dynamic>{
@@ -76,6 +85,9 @@ class BackupService {
 
     await db.transaction((txn) async {
       // Clear all tables in reverse FK order
+      await txn.delete('debt_payments');
+      await txn.delete('debts');
+      await txn.delete('transaction_templates');
       await txn.delete('savings_contributions');
       await txn.delete('savings_goals');
       await txn.delete('recurring_transactions');
@@ -93,6 +105,9 @@ class BackupService {
         'savings_goals',
         'savings_contributions',
         'recurring_transactions',
+        'transaction_templates',
+        'debts',
+        'debt_payments',
       ];
 
       for (final table in tables) {

@@ -9,6 +9,7 @@ class SettingsService {
   static const _boxName = 'settings';
   static const _themeKey = 'themeMode';
   static const _apiKeyKey = 'claudeApiKey';
+  static const _onboardingKey = 'onboarding_completed';
 
   late Box _box;
 
@@ -47,5 +48,13 @@ class SettingsService {
     } else {
       await _box.put(_apiKeyKey, key);
     }
+  }
+
+  // ── Onboarding ──
+  bool get onboardingCompleted =>
+      _box.get(_onboardingKey, defaultValue: false) as bool;
+
+  Future<void> setOnboardingCompleted(bool value) async {
+    await _box.put(_onboardingKey, value);
   }
 }

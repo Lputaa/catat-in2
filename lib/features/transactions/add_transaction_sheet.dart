@@ -678,6 +678,8 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
         return Icons.account_balance_rounded;
       case AccountType.ewallet:
         return Icons.account_balance_wallet_rounded;
+      case AccountType.paylater:
+        return Icons.credit_card_rounded;
       case AccountType.other:
         return Icons.wallet_rounded;
     }

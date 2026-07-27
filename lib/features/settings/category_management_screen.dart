@@ -56,18 +56,23 @@ class _CategoryManagementScreenState extends State<CategoryManagementScreen> {
   Future<void> _confirmDelete(CategoryModel cat) async {
     final repo = CategoryRepo();
     final count = await repo.countTransactions(cat.id);
+    final recurringCount = await repo.countRecurring(cat.id);
 
     if (!mounted) return;
 
-    if (count > 0) {
+    if (count > 0 || recurringCount > 0) {
       // Category is in use — block deletion
+      final reason = <String>[];
+      if (count > 0) reason.add('$count transaksi');
+      if (recurringCount > 0) reason.add('$recurringCount transaksi berulang');
+
       showDialog(
         context: context,
         builder: (ctx) => AlertDialog(
           title: const Text('TIDAK BISA DIHAPUS'),
           content: Text(
-            'Kategori "${cat.name}" masih dipakai di $count transaksi.\n\n'
-            'Hapus atau pindahkan transaksi terkait terlebih dahulu.',
+            'Kategori "${cat.name}" masih dipakai di ${reason.join(" dan ")}.\n\n'
+            'Hapus atau pindahkan data terkait terlebih dahulu.',
           ),
           actions: [
             TextButton(
@@ -84,7 +89,10 @@ class _CategoryManagementScreenState extends State<CategoryManagementScreen> {
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('HAPUS KATEGORI?'),
-        content: Text('Kategori "${cat.name}" akan dihapus permanen.'),
+        content: Text(
+          'Kategori "${cat.name}" akan dihapus permanen. '
+          'Budget yang terkait kategori ini juga ikut terhapus.',
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),

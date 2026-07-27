@@ -19,7 +19,7 @@ class AccountRepo {
     return AccountModel.fromMap(maps.first);
   }
 
-  /// Get current balance = initial_balance + income - expense
+  /// Get current balance = initial_balance + income - expense ± transfers
   Future<double> getBalance(String accountId) async {
     final db = await _db.database;
     final account = await getById(accountId);
@@ -33,10 +33,20 @@ class AccountRepo {
       "SELECT COALESCE(SUM(amount), 0) as total FROM transactions WHERE account_id = ? AND type = 'expense'",
       [accountId],
     );
+    final transferOutResult = await db.rawQuery(
+      "SELECT COALESCE(SUM(amount), 0) as total FROM transactions WHERE account_id = ? AND type = 'transfer'",
+      [accountId],
+    );
+    final transferInResult = await db.rawQuery(
+      "SELECT COALESCE(SUM(amount), 0) as total FROM transactions WHERE to_account_id = ? AND type = 'transfer'",
+      [accountId],
+    );
 
     final income = (incomeResult.first['total'] as num).toDouble();
     final expense = (expenseResult.first['total'] as num).toDouble();
-    return account.initialBalance + income - expense;
+    final transferOut = (transferOutResult.first['total'] as num).toDouble();
+    final transferIn = (transferInResult.first['total'] as num).toDouble();
+    return account.initialBalance + income - expense - transferOut + transferIn;
   }
 
   Future<double> getTotalBalance() async {
@@ -55,7 +65,12 @@ class AccountRepo {
 
   Future<void> update(AccountModel account) async {
     final db = await _db.database;
-    await db.update('accounts', account.toMap(), where: 'id = ?', whereArgs: [account.id]);
+    await db.update(
+      'accounts',
+      account.toMap(),
+      where: 'id = ?',
+      whereArgs: [account.id],
+    );
   }
 
   Future<void> delete(String id) async {
@@ -65,11 +80,21 @@ class AccountRepo {
 
   String newId() => 'acc_${_uuid.v4()}';
 
-  /// Count transactions linked to this account.
+  /// Count transactions linked to this account (including incoming transfers).
   Future<int> countTransactions(String accountId) async {
     final db = await _db.database;
     final result = await db.rawQuery(
-      'SELECT COUNT(*) as cnt FROM transactions WHERE account_id = ?',
+      'SELECT COUNT(*) as cnt FROM transactions WHERE account_id = ? OR to_account_id = ?',
+      [accountId, accountId],
+    );
+    return (result.first['cnt'] as int?) ?? 0;
+  }
+
+  /// Count recurring transactions linked to this account.
+  Future<int> countRecurring(String accountId) async {
+    final db = await _db.database;
+    final result = await db.rawQuery(
+      'SELECT COUNT(*) as cnt FROM recurring_transactions WHERE account_id = ?',
       [accountId],
     );
     return (result.first['cnt'] as int?) ?? 0;

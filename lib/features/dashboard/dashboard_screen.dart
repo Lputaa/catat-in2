@@ -6,14 +6,17 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import '../../core/theme/neo_brutal_colors.dart';
 import '../../data/notifiers/dashboard_providers.dart';
+import '../templates/quick_templates_section.dart';
 import '../../data/notifiers/budget_list_notifier.dart';
 import '../../data/notifiers/recurring_list_notifier.dart';
 import '../../data/notifiers/savings_list_notifier.dart';
+import '../../data/notifiers/debt_list_notifier.dart';
 import '../../data/models/transaction_model.dart';
 import '../../data/models/account_model.dart';
 import '../../data/models/recurring_transaction_model.dart';
 import '../../data/models/savings_goal_model.dart';
 import '../../data/models/savings_contribution_model.dart';
+import '../../data/models/debt_model.dart';
 import '../../data/repositories/savings_goal_repo.dart';
 import '../../data/repositories/recurring_repo.dart';
 import '../../data/notifiers/transaction_list_notifier.dart';
@@ -23,9 +26,13 @@ import '../../shared/widgets/neo_card.dart';
 import '../../shared/widgets/neo_icon_container.dart';
 import '../../shared/widgets/neo_progress_bar.dart';
 import '../../shared/widgets/neo_dialog_button.dart';
+import '../../shared/widgets/neo_button.dart';
 import '../budget/add_budget_sheet.dart';
 import '../recurring/add_recurring_sheet.dart';
 import '../savings/add_savings_sheet.dart';
+import '../debts/add_debt_sheet.dart';
+import '../debts/debts_popup.dart';
+import '../transactions/add_transaction_sheet.dart';
 
 class DashboardScreen extends ConsumerWidget {
   const DashboardScreen({super.key});
@@ -50,6 +57,9 @@ class DashboardScreen extends ConsumerWidget {
             const SizedBox(height: 20),
             // Finance sections - vertical scrollable
             _FinanceSectionsScrollable(),
+            const SizedBox(height: 20),
+            // Quick-entry templates (2-tap recording)
+            const QuickTemplatesSection(),
             const SizedBox(height: 20),
             _RecentTransactionsSection(),
           ],
@@ -143,56 +153,56 @@ class _RecurringStartupBannerState
             ),
             const SizedBox(height: 10),
             // List each manual item with confirm button
-            ...result.needsConfirm.map((rt) => Padding(
-              padding: const EdgeInsets.only(bottom: 6),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      '${rt.note ?? "Transaksi"} — ${NumberFormat.currency(locale: 'id_ID', symbol: 'Rp', decimalDigits: 0).format(rt.amount)}',
-                      style: GoogleFonts.spaceGrotesk(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w700,
+            ...result.needsConfirm.map(
+              (rt) => Padding(
+                padding: const EdgeInsets.only(bottom: 6),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        '${rt.note ?? "Transaksi"} — ${NumberFormat.currency(locale: 'id_ID', symbol: 'Rp', decimalDigits: 0).format(rt.amount)}',
+                        style: GoogleFonts.spaceGrotesk(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                        ),
                       ),
                     ),
-                  ),
-                  GestureDetector(
-                    onTap: () async {
-                      await RecurringRepo().recordAndAdvance(rt);
-                      if (!context.mounted) return;
-                      HapticFeedback.mediumImpact();
-                      setState(() {
-                        result.needsConfirm.remove(rt);
-                      });
-                      ref.read(transactionListProvider.notifier).refresh();
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text(
-                            'Dicatat: ${rt.note ?? "Transaksi"}',
+                    GestureDetector(
+                      onTap: () async {
+                        await RecurringRepo().recordAndAdvance(rt);
+                        if (!context.mounted) return;
+                        HapticFeedback.mediumImpact();
+                        setState(() {
+                          result.needsConfirm.remove(rt);
+                        });
+                        ref.read(transactionListProvider.notifier).refresh();
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text('Dicatat: ${rt.note ?? "Transaksi"}'),
+                          ),
+                        );
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 4,
+                        ),
+                        color: NeoBrutalColors.success,
+                        child: Text(
+                          'CATAT',
+                          style: GoogleFonts.spaceGrotesk(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w900,
+                            color: Colors.white,
+                            letterSpacing: 0.5,
                           ),
                         ),
-                      );
-                    },
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 10,
-                        vertical: 4,
-                      ),
-                      color: NeoBrutalColors.success,
-                      child: Text(
-                        'CATAT',
-                        style: GoogleFonts.spaceGrotesk(
-                          fontSize: 10,
-                          fontWeight: FontWeight.w900,
-                          color: Colors.white,
-                          letterSpacing: 0.5,
-                        ),
                       ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
-            )),
+            ),
             // Confirm all button
             if (result.needsConfirm.length > 1)
               GestureDetector(
@@ -206,9 +216,7 @@ class _RecurringStartupBannerState
                   setState(() => _dismissed = true);
                   ref.read(transactionListProvider.notifier).refresh();
                   ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('$count transaksi dicatat'),
-                    ),
+                    SnackBar(content: Text('$count transaksi dicatat')),
                   );
                 },
                 child: Container(
@@ -346,30 +354,135 @@ class _WalletCarouselState extends ConsumerState<_WalletCarousel> {
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Total balance
-            Padding(
-              padding: const EdgeInsets.only(bottom: 10),
-              child: Row(
-                children: [
-                  Text(
-                    'TOTAL SALDO',
-                    style: GoogleFonts.spaceGrotesk(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w900,
-                      letterSpacing: 1.5,
-                    ),
+            // Total balance — solid hero banner (danger red when net negative)
+            Builder(
+              builder: (context) {
+                final isNegative = totalBalance < 0;
+                final bg = isNegative
+                    ? NeoBrutalColors.danger
+                    : NeoBrutalColors.primary;
+                final fg = isNegative ? Colors.white : NeoBrutalColors.ink;
+                return Container(
+                  margin: const EdgeInsets.only(bottom: 12),
+                  decoration: BoxDecoration(
+                    color: bg,
+                    border: Border.all(color: NeoBrutalColors.ink, width: 3),
+                    boxShadow: const [
+                      BoxShadow(
+                        color: NeoBrutalColors.ink,
+                        offset: Offset(3, 3),
+                        blurRadius: 0,
+                      ),
+                    ],
                   ),
-                  const Spacer(),
-                  Text(
-                    formatter.format(totalBalance),
-                    style: GoogleFonts.spaceGrotesk(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w900,
-                      color: NeoBrutalColors.primary,
-                    ),
+                  child: Stack(
+                    clipBehavior: Clip.hardEdge,
+                    children: [
+                      Positioned(
+                        right: -14,
+                        top: -10,
+                        child: Icon(
+                          Icons.account_balance_wallet_rounded,
+                          size: 84,
+                          color: fg.withValues(alpha: 0.1),
+                        ),
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.all(14),
+                        child: Row(
+                          children: [
+                            Container(
+                              width: 36,
+                              height: 36,
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                border: Border.all(
+                                  color: NeoBrutalColors.ink,
+                                  width: 2,
+                                ),
+                                boxShadow: const [
+                                  BoxShadow(
+                                    color: NeoBrutalColors.ink,
+                                    offset: Offset(2, 2),
+                                    blurRadius: 0,
+                                  ),
+                                ],
+                              ),
+                              child: Icon(
+                                isNegative
+                                    ? Icons.trending_down_rounded
+                                    : Icons.account_balance_wallet_rounded,
+                                size: 19,
+                                color: isNegative
+                                    ? NeoBrutalColors.danger
+                                    : NeoBrutalColors.ink,
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Text(
+                                    'TOTAL SALDO',
+                                    style: GoogleFonts.spaceGrotesk(
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.w900,
+                                      letterSpacing: 1.5,
+                                      color: fg.withValues(alpha: 0.75),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 1),
+                                  FittedBox(
+                                    fit: BoxFit.scaleDown,
+                                    alignment: Alignment.centerLeft,
+                                    child: Text(
+                                      formatter.format(totalBalance),
+                                      style: GoogleFonts.spaceGrotesk(
+                                        fontSize: 23,
+                                        fontWeight: FontWeight.w900,
+                                        color: fg,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(width: 10),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 4,
+                              ),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                border: Border.all(
+                                  color: NeoBrutalColors.ink,
+                                  width: 2,
+                                ),
+                              ),
+                              child: Text(
+                                isNegative
+                                    ? '⚠ MINUS'
+                                    : '${accs.length} WALLET',
+                                style: GoogleFonts.spaceGrotesk(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w900,
+                                  letterSpacing: 0.5,
+                                  color: isNegative
+                                      ? NeoBrutalColors.danger
+                                      : NeoBrutalColors.ink,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
                   ),
-                ],
-              ),
+                );
+              },
             ),
             // 3D Vertical carousel
             NotificationListener<ScrollNotification>(
@@ -383,7 +496,7 @@ class _WalletCarouselState extends ConsumerState<_WalletCarousel> {
                 return false;
               },
               child: SizedBox(
-                height: 150,
+                height: 170,
                 child: PageView.builder(
                   controller: _pageController,
                   scrollDirection: Axis.vertical,
@@ -417,72 +530,134 @@ class _WalletCarouselState extends ConsumerState<_WalletCarousel> {
                           padding: const EdgeInsets.symmetric(vertical: 4),
                           child: NeoCard(
                             color: color,
-                            padding: const EdgeInsets.all(18),
-                            child: Row(
+                            padding: EdgeInsets.zero,
+                            child: Stack(
+                              clipBehavior: Clip.hardEdge,
                               children: [
-                                // Left: icon + name
-                                Container(
-                                  width: 44,
-                                  height: 44,
-                                  decoration: BoxDecoration(
-                                    color: Colors.white.withValues(alpha: 0.2),
-                                    border: Border.all(
-                                      color: Colors.white.withValues(
-                                        alpha: 0.4,
-                                      ),
-                                      width: 2,
-                                    ),
-                                  ),
+                                // Oversized watermark icon (depth accent)
+                                Positioned(
+                                  right: -12,
+                                  bottom: -20,
                                   child: Icon(
                                     icon,
-                                    size: 22,
-                                    color: Colors.white,
+                                    size: 100,
+                                    color: Colors.white.withValues(alpha: 0.14),
                                   ),
                                 ),
-                                const SizedBox(width: 14),
-                                // Middle: name + type
-                                Expanded(
+                                Padding(
+                                  padding: const EdgeInsets.all(12),
                                   child: Column(
                                     crossAxisAlignment:
                                         CrossAxisAlignment.start,
-                                    mainAxisAlignment: MainAxisAlignment.center,
                                     children: [
+                                      // Top: icon box + type chip
+                                      Row(
+                                        children: [
+                                          Container(
+                                            width: 30,
+                                            height: 30,
+                                            decoration: BoxDecoration(
+                                              color: Colors.white,
+                                              border: Border.all(
+                                                color: NeoBrutalColors.ink,
+                                                width: 2,
+                                              ),
+                                              boxShadow: const [
+                                                BoxShadow(
+                                                  color: NeoBrutalColors.ink,
+                                                  offset: Offset(2, 2),
+                                                  blurRadius: 0,
+                                                ),
+                                              ],
+                                            ),
+                                            child: Icon(
+                                              icon,
+                                              size: 16,
+                                              color: color,
+                                            ),
+                                          ),
+                                          const Spacer(),
+                                          Container(
+                                            padding: const EdgeInsets.symmetric(
+                                              horizontal: 8,
+                                              vertical: 3,
+                                            ),
+                                            decoration: BoxDecoration(
+                                              color: Colors.white,
+                                              border: Border.all(
+                                                color: NeoBrutalColors.ink,
+                                                width: 2,
+                                              ),
+                                            ),
+                                            child: Text(
+                                              acc.isCredit
+                                                  ? 'KREDIT'
+                                                  : acc.typeLabel.toUpperCase(),
+                                              style: GoogleFonts.spaceGrotesk(
+                                                fontSize: 9,
+                                                fontWeight: FontWeight.w900,
+                                                letterSpacing: 0.8,
+                                                color: acc.isCredit
+                                                    ? NeoBrutalColors.danger
+                                                    : NeoBrutalColors.ink,
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                      const Spacer(),
+                                      // Bottom: name + balance
                                       Text(
                                         acc.name.toUpperCase(),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
                                         style: GoogleFonts.spaceGrotesk(
-                                          fontSize: 14,
+                                          fontSize: 13,
                                           fontWeight: FontWeight.w900,
-                                          letterSpacing: 0.8,
-                                          color: Colors.white,
-                                        ),
-                                      ),
-                                      Text(
-                                        acc.typeLabel,
-                                        style: GoogleFonts.spaceGrotesk(
-                                          fontSize: 11,
-                                          fontWeight: FontWeight.w600,
+                                          letterSpacing: 1.0,
                                           color: Colors.white.withValues(
-                                            alpha: 0.7,
+                                            alpha: 0.85,
                                           ),
                                         ),
                                       ),
-                                    ],
-                                  ),
-                                ),
-                                const SizedBox(width: 8),
-                                // Right: balance
-                                Flexible(
-                                  child: FittedBox(
-                                    fit: BoxFit.scaleDown,
-                                    alignment: Alignment.centerRight,
-                                    child: Text(
-                                      formatter.format(balance),
-                                      style: GoogleFonts.spaceGrotesk(
-                                        fontSize: 18,
-                                        fontWeight: FontWeight.w900,
-                                        color: Colors.white,
+                                      const SizedBox(height: 2),
+                                      Row(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.end,
+                                        children: [
+                                          Expanded(
+                                            child: FittedBox(
+                                              fit: BoxFit.scaleDown,
+                                              alignment: Alignment.centerLeft,
+                                              child: Text(
+                                                formatter.format(balance),
+                                                style: GoogleFonts.spaceGrotesk(
+                                                  fontSize: 22,
+                                                  fontWeight: FontWeight.w900,
+                                                  color: Colors.white,
+                                                ),
+                                              ),
+                                            ),
+                                          ),
+                                          if (acc.isCredit && balance < 0)
+                                            Padding(
+                                              padding: const EdgeInsets.only(
+                                                left: 8,
+                                              ),
+                                              child: Text(
+                                                'HUTANG',
+                                                style: GoogleFonts.spaceGrotesk(
+                                                  fontSize: 9,
+                                                  fontWeight: FontWeight.w900,
+                                                  letterSpacing: 1.0,
+                                                  color: Colors.white
+                                                      .withValues(alpha: 0.8),
+                                                ),
+                                              ),
+                                            ),
+                                        ],
                                       ),
-                                    ),
+                                    ],
                                   ),
                                 ),
                               ],
@@ -530,8 +705,8 @@ class _WalletCarouselState extends ConsumerState<_WalletCarousel> {
           ],
         );
       },
-      loading: () => const SizedBox(height: 150),
-      error: (_, _) => const SizedBox(height: 150),
+      loading: () => const SizedBox(height: 170),
+      error: (_, _) => const SizedBox(height: 170),
     );
   }
 
@@ -543,6 +718,8 @@ class _WalletCarouselState extends ConsumerState<_WalletCarousel> {
         return Icons.account_balance_rounded;
       case AccountType.ewallet:
         return Icons.account_balance_wallet_rounded;
+      case AccountType.paylater:
+        return Icons.credit_card_rounded;
       case AccountType.other:
         return Icons.wallet_rounded;
     }
@@ -556,6 +733,8 @@ class _WalletCarouselState extends ConsumerState<_WalletCarousel> {
         return NeoBrutalColors.secondary;
       case AccountType.ewallet:
         return NeoBrutalColors.purple;
+      case AccountType.paylater:
+        return NeoBrutalColors.danger;
       case AccountType.other:
         return NeoBrutalColors.ink;
     }
@@ -585,40 +764,106 @@ class _DashboardSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Subtle opaque tint of the section color (Impeller-safe, no alpha fill).
+    final tintedBg = Color.alphaBlend(
+      color.withValues(alpha: 0.06),
+      NeoBrutalColors.surface,
+    );
+
     return GestureDetector(
       onTap: onTap,
       child: NeoCard(
-        padding: const EdgeInsets.all(16),
+        padding: EdgeInsets.zero,
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // Consistent header
-            Row(
-              children: [
-                Container(width: 6, height: 18, color: color),
-                const SizedBox(width: 10),
-                Icon(icon, size: 18, color: color),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    title,
-                    style: GoogleFonts.spaceGrotesk(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w900,
-                      letterSpacing: 1.2,
+            // Solid color header band
+            Container(
+              padding: const EdgeInsets.fromLTRB(12, 8, 10, 8),
+              decoration: BoxDecoration(
+                color: color,
+                border: const Border(
+                  bottom: BorderSide(color: NeoBrutalColors.ink, width: 2),
+                ),
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    width: 26,
+                    height: 26,
+                    decoration: BoxDecoration(
+                      color: NeoBrutalColors.surface,
+                      border: Border.all(color: NeoBrutalColors.ink, width: 2),
+                      boxShadow: const [
+                        BoxShadow(
+                          color: NeoBrutalColors.ink,
+                          offset: Offset(2, 2),
+                          blurRadius: 0,
+                        ),
+                      ],
+                    ),
+                    child: Icon(icon, size: 15, color: color),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      title,
+                      style: GoogleFonts.spaceGrotesk(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: 1.2,
+                        color: Colors.white,
+                      ),
                     ),
                   ),
-                ),
-                trailing ??
-                    Icon(
-                      Icons.chevron_right_rounded,
-                      size: 20,
-                      color: NeoBrutalColors.muted,
+                  Container(
+                    padding: trailing != null
+                        ? const EdgeInsets.symmetric(horizontal: 6, vertical: 2)
+                        : const EdgeInsets.all(3),
+                    decoration: BoxDecoration(
+                      color: NeoBrutalColors.surface,
+                      border: Border.all(color: NeoBrutalColors.ink, width: 2),
                     ),
-              ],
+                    child:
+                        trailing ??
+                        const Icon(
+                          Icons.arrow_forward_rounded,
+                          size: 14,
+                          color: NeoBrutalColors.ink,
+                        ),
+                  ),
+                ],
+              ),
             ),
-            const SizedBox(height: 12),
-            child,
+            // Body: tinted surface + oversized watermark icon
+            Expanded(
+              child: Container(
+                color: tintedBg,
+                child: Stack(
+                  clipBehavior: Clip.hardEdge,
+                  children: [
+                    Positioned(
+                      right: -8,
+                      bottom: -14,
+                      child: Icon(
+                        icon,
+                        size: 76,
+                        color: color.withValues(alpha: 0.10),
+                      ),
+                    ),
+                    Align(
+                      alignment: Alignment.topLeft,
+                      child: Padding(
+                        padding: const EdgeInsets.fromLTRB(14, 12, 14, 10),
+                        child: child,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            // Chunky bottom accent strip
+            Container(height: 5, color: color),
           ],
         ),
       ),
@@ -650,12 +895,28 @@ class _EmptySectionPlaceholder extends StatelessWidget {
             ),
           ),
         ),
-        Text(
-          ctaLabel,
-          style: GoogleFonts.spaceGrotesk(
-            fontSize: 12,
-            fontWeight: FontWeight.w700,
+        const SizedBox(width: 10),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+          decoration: BoxDecoration(
             color: color,
+            border: Border.all(color: NeoBrutalColors.ink, width: 2),
+            boxShadow: const [
+              BoxShadow(
+                color: NeoBrutalColors.ink,
+                offset: Offset(2, 2),
+                blurRadius: 0,
+              ),
+            ],
+          ),
+          child: Text(
+            ctaLabel.toUpperCase(),
+            style: GoogleFonts.spaceGrotesk(
+              fontSize: 11,
+              fontWeight: FontWeight.w900,
+              letterSpacing: 0.5,
+              color: Colors.white,
+            ),
           ),
         ),
       ],
@@ -746,6 +1007,7 @@ class _FinanceSectionsScrollableState
       _BudgetOverviewWidget(),
       _UpcomingRecurringWidget(),
       _SavingsProgressWidget(),
+      _DebtsOverviewWidget(),
     ];
 
     return NotificationListener<ScrollNotification>(
@@ -761,7 +1023,7 @@ class _FinanceSectionsScrollableState
       child: Column(
         children: [
           SizedBox(
-            height: 180,
+            height: 196,
             child: PageView.builder(
               controller: _pageController,
               scrollDirection: Axis.vertical,
@@ -860,7 +1122,7 @@ class _BudgetOverviewWidget extends ConsumerWidget {
     double totalLimit = 0;
     double totalSpent = 0;
     for (final b in list) {
-      totalLimit += b.budget.limitAmount;
+      totalLimit += b.effectiveLimit;
       totalSpent += b.spent;
     }
     final totalPercent = totalLimit > 0 ? totalSpent / totalLimit : 0.0;
@@ -1054,7 +1316,7 @@ class _BudgetOverviewWidget extends ConsumerWidget {
                             ),
                             const SizedBox(height: 2),
                             Text(
-                              '${formatter.format(w.spent)} / ${formatter.format(w.budget.limitAmount)}',
+                              '${formatter.format(w.spent)} / ${formatter.format(w.effectiveLimit)}',
                               style: GoogleFonts.spaceGrotesk(fontSize: 11),
                             ),
                           ],
@@ -1774,11 +2036,84 @@ class _SavingsProgressWidget extends ConsumerWidget {
   }
 }
 
+// ── Debts Overview Widget (Hutang & Piutang) ──
+class _DebtsOverviewWidget extends ConsumerWidget {
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final state = ref.watch(debtListProvider);
+    final active = state.debts.where((d) => !d.isSettled).toList();
+    final formatter = NumberFormat.currency(
+      locale: 'id_ID',
+      symbol: 'Rp',
+      decimalDigits: 0,
+    );
+
+    if (active.isEmpty) {
+      return _DashboardSection(
+        color: NeoBrutalColors.purple,
+        icon: Icons.handshake_rounded,
+        title: 'HUTANG & PIUTANG',
+        onTap: () => AddDebtSheet.show(context),
+        child: const _EmptySectionPlaceholder(
+          message: 'Catat pinjaman atau piutang antar orang',
+          ctaLabel: 'Catat →',
+          color: NeoBrutalColors.purple,
+        ),
+      );
+    }
+
+    final hutangCount = active.where((d) => d.type == DebtType.hutang).length;
+    final piutangCount = active.length - hutangCount;
+    final overdueCount = active.where((d) => d.isOverdue).length;
+
+    final parts = <String>[
+      if (hutangCount > 0)
+        '$hutangCount hutang (${formatter.format(state.totalHutang)})',
+      if (piutangCount > 0)
+        '$piutangCount piutang (${formatter.format(state.totalPiutang)})',
+    ];
+
+    return _DashboardSection(
+      color: NeoBrutalColors.purple,
+      icon: Icons.handshake_rounded,
+      title: 'HUTANG & PIUTANG',
+      onTap: () => DebtsListPopup.show(context),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Anda memiliki ${active.length} catatan aktif',
+            style: GoogleFonts.spaceGrotesk(
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            '${parts.join(' • ')}'
+            '${overdueCount > 0 ? '\n$overdueCount sudah jatuh tempo!' : ''}',
+            style: GoogleFonts.spaceGrotesk(
+              fontSize: 11,
+              fontWeight: FontWeight.w500,
+              color: overdueCount > 0
+                  ? NeoBrutalColors.danger
+                  : NeoBrutalColors.ink.withValues(alpha: 0.7),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 // ── Recent Transactions ──
 class _RecentTransactionsSection extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final txs = ref.watch(recentTransactionsProvider); // Now sync Provider
+    final txState = ref.watch(transactionListProvider);
+    final hasAnyTransaction =
+        txState.isLoading || txState.transactions.isNotEmpty;
     final formatter = NumberFormat.currency(
       locale: 'id_ID',
       symbol: 'Rp',
@@ -1797,11 +2132,50 @@ class _RecentTransactionsSection extends ConsumerWidget {
           ),
         ),
         const SizedBox(height: 12),
-        if (txs.isEmpty)
+        if (txs.isEmpty && !hasAnyTransaction)
+          // First-time empty state — guide user to their first record
+          NeoCard(
+            child: Column(
+              children: [
+                const Icon(
+                  Icons.receipt_long_rounded,
+                  size: 48,
+                  color: NeoBrutalColors.muted,
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  'MULAI CATAT PENGELUARAN PERTAMAMU',
+                  style: GoogleFonts.spaceGrotesk(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: 0.5,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  'Kopi tadi pagi? Ongkos? Catat biar nggak lupa.',
+                  style: GoogleFonts.spaceGrotesk(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 16),
+                NeoButton(
+                  label: 'Catat Sekarang',
+                  icon: Icons.add_rounded,
+                  color: NeoBrutalColors.primary,
+                  onTap: () => AddTransactionSheet.show(context),
+                ),
+              ],
+            ),
+          )
+        else if (txs.isEmpty)
           NeoCard(
             child: Center(
               child: Text(
-                'Belum ada transaksi',
+                'Belum ada transaksi hari ini',
                 style: GoogleFonts.spaceGrotesk(
                   fontSize: 14,
                   fontWeight: FontWeight.w600,
